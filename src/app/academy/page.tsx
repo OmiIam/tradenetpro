@@ -58,7 +58,7 @@ export default function AcademyPage() {
       lessons: 24,
       level: 'Beginner',
       category: 'basics',
-      price: 'Free',
+      price: '$350',
       image: '📚',
       tags: ['Fundamentals', 'Market Analysis', 'Risk Management']
     },
@@ -73,7 +73,7 @@ export default function AcademyPage() {
       lessons: 36,
       level: 'Intermediate',
       category: 'technical',
-      price: '$99',
+      price: '$500',
       image: '📈',
       tags: ['Charts', 'Indicators', 'Patterns']
     },
@@ -88,7 +88,7 @@ export default function AcademyPage() {
       lessons: 30,
       level: 'Advanced',
       category: 'options',
-      price: '$149',
+      price: '$650',
       image: '🎯',
       tags: ['Options', 'Greeks', 'Strategies']
     },
@@ -103,7 +103,7 @@ export default function AcademyPage() {
       lessons: 18,
       level: 'Intermediate',
       category: 'psychology',
-      price: '$79',
+      price: '$1640',
       image: '🧠',
       tags: ['Psychology', 'Discipline', 'Emotions']
     }

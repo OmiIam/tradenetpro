@@ -181,35 +181,37 @@ const Features = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mt-16"
+          className="mt-20 flex justify-center items-center"
         >
-          <div className="bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 lg:p-12 max-w-4xl mx-auto">
-            <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-              Ready to Start Trading?
-            </h3>
-            <p className="text-gray-300 mb-8 text-lg">
-              Join thousands of professional traders who trust our platform for their daily trading activities.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/signup">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-                >
-                  <span>Get Started Free</span>
-                  <ArrowRight className="w-5 h-5" />
-                </motion.button>
-              </Link>
-              <Link href="/features">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="border-2 border-white/20 hover:border-white/30 bg-white/5 hover:bg-white/10 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300"
-                >
-                  View All Features
-                </motion.button>
-              </Link>
+          <div className="bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 sm:p-8 lg:p-12 max-w-5xl w-full flex justify-center items-center">
+            <div className="text-center space-y-6 w-full">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-tight">
+                Ready to Start Trading?
+              </h3>
+              <p className="text-gray-300 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+                Join thousands of professional traders who trust our platform for their daily trading activities.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4 max-w-lg sm:max-w-none mx-auto">
+                <Link href="/signup" className="w-full sm:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full sm:w-auto bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                  >
+                    <span>Get Started Free</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </motion.button>
+                </Link>
+                <Link href="/pricing" className="w-full sm:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full sm:w-auto border-2 border-white/20 hover:border-white/30 bg-white/5 hover:bg-white/10 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300"
+                  >
+                    View Pricing
+                  </motion.button>
+                </Link>
+              </div>
             </div>
           </div>
         </motion.div>

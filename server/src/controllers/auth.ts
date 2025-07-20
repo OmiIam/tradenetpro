@@ -2,17 +2,36 @@ import { Request, Response } from 'express';
 import { UserModel, CreateUserData } from '../models/User';
 import AuthUtils from '../utils/auth';
 import DatabaseManager from '../models/Database';
+import { VerificationService } from '../services/VerificationService';
 
 export class AuthController {
   private userModel: UserModel;
+  private verificationService: VerificationService;
 
   constructor(database: DatabaseManager) {
     this.userModel = new UserModel(database.getDatabase());
+    this.verificationService = new VerificationService(database);
   }
 
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, first_name, last_name, role } = req.body;
+      const { 
+        email, 
+        password, 
+        first_name, 
+        last_name, 
+        phone_number,
+        date_of_birth,
+        address_line_1,
+        address_line_2,
+        city,
+        state,
+        postal_code,
+        country,
+        terms_accepted,
+        privacy_accepted,
+        role 
+      } = req.body;
 
       // Check if user already exists
       const existingUser = this.userModel.getUserByEmail(email);
@@ -21,32 +40,44 @@ export class AuthController {
         return;
       }
 
-      // Create user data
+      // Create user data with enhanced fields
       const userData: CreateUserData = {
         email,
         password,
         first_name,
         last_name,
+        phone_number,
+        date_of_birth,
+        address_line_1,
+        address_line_2,
+        city,
+        state,
+        postal_code,
+        country,
+        terms_accepted: terms_accepted || false,
+        privacy_accepted: privacy_accepted || false,
         role: role || 'user'
       };
 
-      // Create user
+      // Create user with status pending_verification
       const user = await this.userModel.createUser(userData);
 
-      // Generate tokens
-      const tokenPair = AuthUtils.generateTokenPair({
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      });
+      // Send verification email
+      const emailSent = await this.verificationService.sendEmailVerification(user.id);
 
       // Don't send password hash in response
       const { password_hash, ...userResponse } = user;
 
       res.status(201).json({
-        message: 'User registered successfully',
+        message: 'Registration successful! Please check your email to verify your account.',
         user: userResponse,
-        tokens: tokenPair
+        verification_email_sent: emailSent,
+        next_steps: [
+          'Check your email for verification link',
+          'Complete your profile information',
+          'Wait for admin approval',
+          'Account will be funded by admin to start trading'
+        ]
       });
     } catch (error) {
       console.error('Registration error:', error);

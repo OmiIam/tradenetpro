@@ -13,29 +13,91 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
   next();
 };
 
-// Authentication validation rules
+// Enhanced registration validation rules
 export const validateRegistration = [
   body('email')
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
   body('first_name')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters'),
+    .withMessage('First name must be between 2 and 50 characters')
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('First name can only contain letters and spaces'),
   body('last_name')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
+    .withMessage('Last name must be between 2 and 50 characters')
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('Last name can only contain letters and spaces'),
+  body('phone_number')
+    .optional()
+    .isMobilePhone('any')
+    .withMessage('Please provide a valid phone number'),
+  body('date_of_birth')
+    .optional()
+    .isISO8601()
+    .withMessage('Please provide a valid date of birth')
+    .custom((value) => {
+      if (value) {
+        const age = new Date().getFullYear() - new Date(value).getFullYear();
+        if (age < 18) {
+          throw new Error('You must be at least 18 years old to register');
+        }
+      }
+      return true;
+    }),
+  body('address_line_1')
+    .optional()
+    .trim()
+    .isLength({ min: 5, max: 100 })
+    .withMessage('Address must be between 5 and 100 characters'),
+  body('city')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('City must be between 2 and 50 characters'),
+  body('state')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('State must be between 2 and 50 characters'),
+  body('postal_code')
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 20 })
+    .withMessage('Postal code must be between 3 and 20 characters'),
+  body('country')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Country must be between 2 and 50 characters'),
+  body('terms_accepted')
+    .isBoolean()
+    .custom((value) => {
+      if (value !== true) {
+        throw new Error('You must accept the terms and conditions');
+      }
+      return true;
+    }),
+  body('privacy_accepted')
+    .isBoolean()
+    .custom((value) => {
+      if (value !== true) {
+        throw new Error('You must accept the privacy policy');
+      }
+      return true;
+    }),
   body('role')
     .optional()
-    .isIn(['user', 'admin'])
-    .withMessage('Role must be either user or admin'),
+    .isIn(['user'])
+    .withMessage('Invalid role specified'), // Only allow 'user' role from registration
   handleValidationErrors
 ];
 

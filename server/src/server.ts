@@ -7,6 +7,7 @@ import DatabaseManager from './models/Database';
 import createAuthRoutes from './routes/auth';
 import createAdminRoutes from './routes/admin';
 import createUserRoutes from './routes/user';
+import verificationRoutes from './routes/verification';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', createAuthRoutes(database));
 app.use('/api/admin', createAdminRoutes(database));
 app.use('/api/user', createUserRoutes(database));
+app.use('/api/verification', verificationRoutes);
 
 // API documentation endpoint
 app.get('/api', (req, res) => {
@@ -112,6 +114,18 @@ app.get('/api', (req, res) => {
           'POST /users/:userId/portfolio/positions - Add portfolio position',
           'GET /transactions - Get all transactions',
           'GET /portfolios - Get all portfolios'
+        ]
+      },
+      verification: {
+        base: '/api/verification',
+        routes: [
+          'POST /send-email-verification - Send email verification',
+          'GET /verify-email?token=... - Verify email with token',
+          'POST /forgot-password - Send password reset email',
+          'POST /reset-password - Reset password with token',
+          'GET /status/:userId - Get user verification status',
+          'POST /admin/verify-user-email - Admin verify user email',
+          'POST /admin/cleanup-tokens - Cleanup expired tokens'
         ]
       }
     }

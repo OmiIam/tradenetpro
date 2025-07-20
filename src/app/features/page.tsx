@@ -264,22 +264,22 @@ export default function FeaturesPage() {
             <p className="text-body-lg text-gray-300 mb-8">
               Join thousands of professional traders who trust trade.im for their daily trading activities.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/signup">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg sm:max-w-none mx-auto">
+              <Link href="/signup" className="w-full sm:w-auto">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="btn-trade-primary flex items-center space-x-2 text-lg px-8 py-4"
+                  className="w-full sm:w-auto btn-trade-primary flex items-center justify-center space-x-2 text-lg px-8 py-4"
                 >
                   <span>Get Started Free</span>
                   <ArrowRight className="w-5 h-5" />
                 </motion.button>
               </Link>
-              <Link href="/pricing">
+              <Link href="/pricing" className="w-full sm:w-auto">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="btn-trade-secondary text-lg px-8 py-4"
+                  className="w-full sm:w-auto btn-trade-secondary text-lg px-8 py-4"
                 >
                   View Pricing
                 </motion.button>

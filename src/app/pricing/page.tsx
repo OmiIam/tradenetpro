@@ -26,8 +26,8 @@ export default function PricingPage() {
   const plans = [
     {
       name: 'Starter',
-      price: '0',
-      period: 'Free Forever',
+      price: '500',
+      period: '',
       description: 'Perfect for beginners getting started with trading',
       icon: <TrendingUp className="w-6 h-6" />,
       color: 'from-blue-500 to-purple-500',
@@ -50,7 +50,7 @@ export default function PricingPage() {
     },
     {
       name: 'Professional',
-      price: '29',
+      price: '3000',
       period: 'per month',
       description: 'Advanced tools for serious traders',
       icon: <BarChart3 className="w-6 h-6" />,
@@ -73,7 +73,7 @@ export default function PricingPage() {
     },
     {
       name: 'Enterprise',
-      price: '99',
+      price: '20000',
       period: 'per month',
       description: 'Premium features for institutional traders',
       icon: <Crown className="w-6 h-6" />,

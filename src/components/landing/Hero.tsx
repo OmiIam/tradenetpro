@@ -125,23 +125,23 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-12 sm:mb-16"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 sm:mb-16 max-w-lg sm:max-w-none mx-auto"
           >
-            <Link href="/signup">
+            <Link href="/signup" className="w-full sm:w-auto">
               <motion.button 
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center space-x-2 text-lg"
+                className="w-full sm:w-auto group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center space-x-2 text-lg"
               >
                 <span>Start Trading Free</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </motion.button>
             </Link>
-            <Link href="/features">
+            <Link href="/features" className="w-full sm:w-auto">
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="group border-2 border-white/20 hover:border-white/30 bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 text-lg"
+                className="w-full sm:w-auto group border-2 border-white/20 hover:border-white/30 bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 text-lg"
               >
                 <Play className="w-5 h-5" />
                 <span>Watch Demo</span>
@@ -154,14 +154,16 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mb-12 text-sm text-gray-400"
+            className="mb-12"
           >
-            {trustIndicators.map((indicator, index) => (
-              <div key={indicator} className="flex items-center space-x-2">
-                <Shield className="w-4 h-4 text-green-400" />
-                <span>{indicator}</span>
-              </div>
-            ))}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap justify-center items-center gap-4 sm:gap-8 text-xs sm:text-sm text-gray-400">
+              {trustIndicators.map((indicator, index) => (
+                <div key={indicator} className="flex items-center justify-center space-x-2 p-3 sm:p-0 bg-white/5 sm:bg-transparent rounded-lg sm:rounded-none border border-white/10 sm:border-none">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
+                  <span className="text-center">{indicator}</span>
+                </div>
+              ))}
+            </div>
           </motion.div>
 
           {/* Statistics */}
