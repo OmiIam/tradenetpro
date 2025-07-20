@@ -7,6 +7,8 @@ import UserManagement from '@/components/admin/UserManagement'
 import BalanceManager from '@/components/admin/BalanceManager'
 import PortfolioManager from '@/components/admin/PortfolioManager'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import MobileOptimizedCard from '@/components/admin/MobileOptimizedCard'
+import MobileBreadcrumb from '@/components/admin/MobileBreadcrumb'
 import { AdminUser, AdminStats, BalanceAdjustment, PortfolioPosition } from '@/types/admin'
 import { useAdminStats, useAdminUsers } from '@/hooks/useAdminData'
 
@@ -81,39 +83,30 @@ export default function AdminPage() {
             <AdminStatsComponent stats={stats} loading={statsLoading} error={statsError} />
             
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div
-                className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-colors cursor-pointer"
-                onClick={() => setActiveTab('users')}
-              >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <MobileOptimizedCard onClick={() => setActiveTab('users')}>
                 <h3 className="text-lg font-semibold text-white mb-2">User Management</h3>
                 <p className="text-gray-400 text-sm mb-4">
                   Manage user accounts, status, and permissions
                 </p>
                 <div className="text-blue-400 font-medium">Manage Users →</div>
-              </div>
+              </MobileOptimizedCard>
               
-              <div
-                className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-colors cursor-pointer"
-                onClick={() => setActiveTab('balances')}
-              >
+              <MobileOptimizedCard onClick={() => setActiveTab('balances')}>
                 <h3 className="text-lg font-semibold text-white mb-2">Balance Manager</h3>
                 <p className="text-gray-400 text-sm mb-4">
                   Adjust user balances and track transactions
                 </p>
                 <div className="text-green-400 font-medium">Manage Balances →</div>
-              </div>
+              </MobileOptimizedCard>
               
-              <div
-                className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-colors cursor-pointer"
-                onClick={() => setActiveTab('portfolios')}
-              >
+              <MobileOptimizedCard onClick={() => setActiveTab('portfolios')}>
                 <h3 className="text-lg font-semibold text-white mb-2">Portfolio Manager</h3>
                 <p className="text-gray-400 text-sm mb-4">
                   Manage user portfolios and positions
                 </p>
                 <div className="text-purple-400 font-medium">Manage Portfolios →</div>
-              </div>
+              </MobileOptimizedCard>
             </div>
           </div>
         )
@@ -172,12 +165,24 @@ export default function AdminPage() {
 
   return (
     <ProtectedRoute requireAdmin={true}>
-      <div className="min-h-screen bg-trade-navy flex">
+      <div className="min-h-screen bg-trade-navy flex relative">
         <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
         
-        <div className="flex-1 overflow-auto">
-          <div className="p-6">
-            {renderContent()}
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 md:ml-0">
+          {/* Mobile Header Space */}
+          <div className="h-16 md:hidden"></div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-auto">
+            <div className="p-4 md:p-6 max-w-full">
+              <MobileBreadcrumb 
+                currentTab={activeTab} 
+                onBack={() => setActiveTab('overview')}
+                showBackButton={activeTab !== 'overview'}
+              />
+              {renderContent()}
+            </div>
           </div>
         </div>
       </div>
