@@ -6,135 +6,62 @@ import AdminStatsComponent from '@/components/admin/AdminStats'
 import UserManagement from '@/components/admin/UserManagement'
 import BalanceManager from '@/components/admin/BalanceManager'
 import PortfolioManager from '@/components/admin/PortfolioManager'
+import ProtectedRoute from '@/components/ProtectedRoute'
 import { AdminUser, AdminStats, BalanceAdjustment, PortfolioPosition } from '@/types/admin'
+import { useAdminStats, useAdminUsers } from '@/hooks/useAdminData'
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('overview')
+  
+  // Use real admin data hooks
+  const { stats, loading: statsLoading, error: statsError } = useAdminStats()
+  const { 
+    users, 
+    loading: usersLoading, 
+    error: usersError,
+    updateUser,
+    deleteUser,
+    toggleUserStatus,
+    adjustBalance
+  } = useAdminUsers()
 
-  // Mock admin data
-  const adminStats: AdminStats = {
-    totalUsers: 1247,
-    activeUsers: 1089,
-    suspendedUsers: 23,
-    totalPortfolioValue: 45678900,
-    totalTrades: 15678,
-    todayTrades: 1234,
-    totalRevenue: 234567,
-    monthlyRevenue: 45678
-  }
-
-  const mockUsers: AdminUser[] = [
-    {
-      id: 'user1',
-      email: 'john.doe@example.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      role: 'user',
-      status: 'active',
-      createdAt: new Date('2024-01-15'),
-      lastLogin: new Date('2024-01-18'),
-      totalBalance: 25000,
-      portfolioValue: 45000,
-      totalTrades: 234,
-      winRate: 78.5
-    },
-    {
-      id: 'user2',
-      email: 'jane.smith@example.com',
-      firstName: 'Jane',
-      lastName: 'Smith',
-      role: 'user',
-      status: 'active',
-      createdAt: new Date('2024-01-10'),
-      lastLogin: new Date('2024-01-18'),
-      totalBalance: 15000,
-      portfolioValue: 32000,
-      totalTrades: 156,
-      winRate: 65.2
-    },
-    {
-      id: 'user3',
-      email: 'bob.johnson@example.com',
-      firstName: 'Bob',
-      lastName: 'Johnson',
-      role: 'user',
-      status: 'suspended',
-      createdAt: new Date('2024-01-05'),
-      lastLogin: new Date('2024-01-16'),
-      totalBalance: 5000,
-      portfolioValue: 12000,
-      totalTrades: 89,
-      winRate: 45.3
-    },
-    {
-      id: 'user4',
-      email: 'alice.brown@example.com',
-      firstName: 'Alice',
-      lastName: 'Brown',
-      role: 'user',
-      status: 'active',
-      createdAt: new Date('2024-01-12'),
-      lastLogin: new Date('2024-01-18'),
-      totalBalance: 35000,
-      portfolioValue: 67000,
-      totalTrades: 345,
-      winRate: 82.1
-    },
-    {
-      id: 'user5',
-      email: 'charlie.wilson@example.com',
-      firstName: 'Charlie',
-      lastName: 'Wilson',
-      role: 'user',
-      status: 'inactive',
-      createdAt: new Date('2024-01-08'),
-      lastLogin: new Date('2024-01-14'),
-      totalBalance: 8000,
-      portfolioValue: 15000,
-      totalTrades: 67,
-      winRate: 58.7
+  const handleEditUser = async (user: AdminUser) => {
+    try {
+      await updateUser(user.id, {
+        first_name: user.firstName,
+        last_name: user.lastName,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      })
+    } catch (error) {
+      console.error('Failed to edit user:', error)
     }
-  ]
-
-  const [users, setUsers] = useState<AdminUser[]>(mockUsers)
-
-  const handleEditUser = (user: AdminUser) => {
-    console.log('Edit user:', user)
-    // Implementation for editing user
   }
 
-  const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter(user => user.id !== userId))
-    console.log('Delete user:', userId)
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await deleteUser(userId)
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+    }
   }
 
-  const handleToggleStatus = (userId: string, status: 'active' | 'suspended') => {
-    setUsers(users.map(user => 
-      user.id === userId ? { ...user, status } : user
-    ))
-    console.log('Toggle status:', userId, status)
+  const handleToggleStatus = async (userId: string, status: 'active' | 'suspended') => {
+    try {
+      await toggleUserStatus(userId, status)
+    } catch (error) {
+      console.error('Failed to toggle user status:', error)
+    }
   }
 
-  const handleAdjustBalance = (adjustment: BalanceAdjustment) => {
-    setUsers(users.map(user => {
-      if (user.id === adjustment.userId) {
-        let newBalance = user.totalBalance
-        switch (adjustment.adjustmentType) {
-          case 'add':
-            newBalance += adjustment.amount
-            break
-          case 'subtract':
-            newBalance -= adjustment.amount
-            break
-          case 'set':
-            newBalance = adjustment.amount
-            break
-        }
-        return { ...user, totalBalance: Math.max(0, newBalance) }
-      }
-      return user
-    }))
-    console.log('Adjust balance:', adjustment)
+  const handleAdjustBalance = async (adjustment: BalanceAdjustment) => {
+    try {
+      const type = adjustment.adjustmentType === 'add' ? 'credit' : 'debit'
+      await adjustBalance(adjustment.userId, adjustment.amount, type, adjustment.reason)
+    } catch (error) {
+      console.error('Failed to adjust balance:', error)
+    }
   }
 
   const handleUpdatePortfolio = (userId: string, positions: PortfolioPosition[]) => {
@@ -151,7 +78,7 @@ export default function AdminPage() {
               <h1 className="text-3xl font-bold text-white mb-2">Admin Overview</h1>
               <p className="text-gray-400">Monitor platform performance and user activity</p>
             </div>
-            <AdminStatsComponent stats={adminStats} />
+            <AdminStatsComponent stats={stats} loading={statsLoading} error={statsError} />
             
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -194,6 +121,8 @@ export default function AdminPage() {
         return (
           <UserManagement
             users={users}
+            loading={usersLoading}
+            error={usersError}
             onEditUser={handleEditUser}
             onDeleteUser={handleDeleteUser}
             onToggleStatus={handleToggleStatus}
@@ -203,6 +132,8 @@ export default function AdminPage() {
         return (
           <BalanceManager
             users={users}
+            loading={usersLoading}
+            error={usersError}
             onAdjustBalance={handleAdjustBalance}
           />
         )
@@ -240,14 +171,16 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-trade-navy flex">
-      <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          {renderContent()}
+    <ProtectedRoute requireAdmin={true}>
+      <div className="min-h-screen bg-trade-navy flex">
+        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        
+        <div className="flex-1 overflow-auto">
+          <div className="p-6">
+            {renderContent()}
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }

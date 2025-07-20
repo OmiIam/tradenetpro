@@ -21,6 +21,8 @@ import { AdminUser } from '@/types/admin'
 
 interface UserManagementProps {
   users: AdminUser[]
+  loading?: boolean
+  error?: string | null
   onEditUser: (user: AdminUser) => void
   onDeleteUser: (userId: string) => void
   onToggleStatus: (userId: string, status: 'active' | 'suspended') => void
@@ -28,6 +30,8 @@ interface UserManagementProps {
 
 const UserManagement: React.FC<UserManagementProps> = ({ 
   users, 
+  loading,
+  error,
   onEditUser, 
   onDeleteUser, 
   onToggleStatus 
@@ -61,6 +65,20 @@ const UserManagement: React.FC<UserManagementProps> = ({
       style: 'currency',
       currency: 'USD'
     }).format(amount)
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="glass-dark rounded-xl p-6">
+          <div className="flex items-center space-x-2 text-red-400">
+            <Users className="w-5 h-5" />
+            <span>Failed to load users: {error}</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -129,7 +147,54 @@ const UserManagement: React.FC<UserManagementProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user, index) => (
+              {loading ? (
+                // Loading skeleton
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="border-b border-gray-800">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center space-x-3 animate-pulse">
+                        <div className="w-10 h-10 bg-gray-600 rounded-full"></div>
+                        <div>
+                          <div className="w-32 h-4 bg-gray-600 rounded mb-2"></div>
+                          <div className="w-48 h-3 bg-gray-600 rounded"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="w-16 h-4 bg-gray-600 rounded animate-pulse"></div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="w-20 h-4 bg-gray-600 rounded animate-pulse"></div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="w-24 h-4 bg-gray-600 rounded animate-pulse"></div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="w-16 h-4 bg-gray-600 rounded animate-pulse"></div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="w-20 h-4 bg-gray-600 rounded animate-pulse"></div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="w-24 h-4 bg-gray-600 rounded animate-pulse"></div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex space-x-2">
+                        <div className="w-8 h-8 bg-gray-600 rounded animate-pulse"></div>
+                        <div className="w-8 h-8 bg-gray-600 rounded animate-pulse"></div>
+                        <div className="w-8 h-8 bg-gray-600 rounded animate-pulse"></div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-gray-400">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user, index) => (
                 <motion.tr
                   key={user.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -218,7 +283,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     </div>
                   </td>
                 </motion.tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

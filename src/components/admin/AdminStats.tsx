@@ -2,14 +2,63 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Users, DollarSign, TrendingUp, Activity, UserCheck, UserX } from 'lucide-react'
+import { Users, DollarSign, TrendingUp, Activity, UserCheck, UserX, Loader2 } from 'lucide-react'
 import { AdminStats } from '@/types/admin'
 
 interface AdminStatsProps {
-  stats: AdminStats
+  stats: AdminStats | null;
+  loading?: boolean;
+  error?: string | null;
 }
 
-const AdminStatsComponent: React.FC<AdminStatsProps> = ({ stats }) => {
+const AdminStatsComponent: React.FC<AdminStatsProps> = ({ stats, loading, error }) => {
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="glass-dark rounded-xl p-6 animate-pulse">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-gray-600 rounded-lg"></div>
+              <div className="text-right">
+                <div className="w-16 h-6 bg-gray-600 rounded mb-2"></div>
+                <div className="w-20 h-4 bg-gray-600 rounded"></div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-4 bg-gray-600 rounded"></div>
+              <div className="w-16 h-4 bg-gray-600 rounded"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="glass-dark rounded-xl p-6 mb-8">
+        <div className="flex items-center space-x-2 text-red-400">
+          <UserX className="w-5 h-5" />
+          <span>Failed to load admin statistics: {error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no stats
+  if (!stats) {
+    return (
+      <div className="glass-dark rounded-xl p-6 mb-8">
+        <div className="text-center text-gray-400">
+          <Users className="w-8 h-8 mx-auto mb-2" />
+          <span>No statistics available</span>
+        </div>
+      </div>
+    );
+  }
+
   const statsCards = [
     {
       title: 'Total Users',

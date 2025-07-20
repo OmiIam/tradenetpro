@@ -19,10 +19,12 @@ import { AdminUser, BalanceAdjustment } from '@/types/admin'
 
 interface BalanceManagerProps {
   users: AdminUser[]
+  loading?: boolean
+  error?: string | null
   onAdjustBalance: (adjustment: BalanceAdjustment) => void
 }
 
-const BalanceManager: React.FC<BalanceManagerProps> = ({ users, onAdjustBalance }) => {
+const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, onAdjustBalance }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
   const [showAdjustModal, setShowAdjustModal] = useState(false)

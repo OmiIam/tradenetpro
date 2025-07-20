@@ -1,0 +1,165 @@
+import { apiClient } from './api';
+
+// Types matching the backend API responses
+export interface BackendUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'user' | 'admin';
+  status: 'active' | 'suspended' | 'inactive';
+  created_at: string;
+  updated_at: string;
+  last_login: string | null;
+}
+
+export interface BackendPortfolio {
+  id: number;
+  user_id: number;
+  total_balance: number;
+  portfolio_value: number;
+  total_trades: number;
+  win_rate: number;
+}
+
+export interface BackendTransaction {
+  id: number;
+  user_id: number;
+  type: 'deposit' | 'withdrawal' | 'buy' | 'sell' | 'adjustment';
+  amount: number;
+  symbol?: string;
+  quantity?: number;
+  price?: number;
+  status: 'pending' | 'completed' | 'failed';
+  description: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface BackendAdminStats {
+  users: {
+    total: number;
+    active: number;
+    suspended: number;
+    inactive: number;
+  };
+  portfolio: {
+    totalValue: number;
+    totalTrades: number;
+    averageWinRate: number;
+  };
+  transactions: {
+    total: number;
+    totalVolume: number;
+    todayCount: number;
+    todayVolume: number;
+  };
+}
+
+// Admin API functions
+export const adminApi = {
+  // Dashboard stats
+  async getStats(): Promise<BackendAdminStats> {
+    const response = await apiClient.get<BackendAdminStats>('/api/admin/stats');
+    return response.data || response as BackendAdminStats;
+  },
+
+  // User management
+  async getUsers(page: number = 1, limit: number = 10): Promise<{ users: BackendUser[], total: number }> {
+    const response = await apiClient.get<{ users: BackendUser[], total: number }>(`/api/admin/users?page=${page}&limit=${limit}`);
+    return response.data || response as { users: BackendUser[], total: number };
+  },
+
+  async getUserById(userId: number): Promise<BackendUser> {
+    const response = await apiClient.get<BackendUser>(`/api/admin/users/${userId}`);
+    return response.data || response as BackendUser;
+  },
+
+  async updateUser(userId: number, userData: Partial<BackendUser>): Promise<BackendUser> {
+    const response = await apiClient.put<BackendUser>(`/api/admin/users/${userId}`, userData);
+    return response.data || response as BackendUser;
+  },
+
+  async deleteUser(userId: number): Promise<{ message: string }> {
+    const response = await apiClient.delete<{ message: string }>(`/api/admin/users/${userId}`);
+    return response.data || response as { message: string };
+  },
+
+  async toggleUserStatus(userId: number, status: 'active' | 'suspended'): Promise<BackendUser> {
+    const response = await apiClient.put<BackendUser>(`/api/admin/users/${userId}/status`, { status });
+    return response.data || response as BackendUser;
+  },
+
+  // Balance management
+  async adjustBalance(userId: number, amount: number, type: 'credit' | 'debit', description: string): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(`/api/admin/users/${userId}/balance`, {
+      amount,
+      type,
+      description
+    });
+    return response.data || response as { message: string };
+  },
+
+  async getUserTransactions(userId: number, page: number = 1, limit: number = 20): Promise<{ transactions: BackendTransaction[], total: number }> {
+    const response = await apiClient.get<{ transactions: BackendTransaction[], total: number }>(`/api/admin/users/${userId}/transactions?page=${page}&limit=${limit}`);
+    return response.data || response as { transactions: BackendTransaction[], total: number };
+  },
+
+  async createTransaction(userId: number, transactionData: {
+    type: 'deposit' | 'withdrawal';
+    amount: number;
+    description: string;
+  }): Promise<BackendTransaction> {
+    const response = await apiClient.post<BackendTransaction>(`/api/admin/users/${userId}/transactions`, transactionData);
+    return response.data || response as BackendTransaction;
+  },
+
+  // Portfolio management
+  async getUserPortfolio(userId: number): Promise<BackendPortfolio> {
+    const response = await apiClient.get<BackendPortfolio>(`/api/admin/users/${userId}/portfolio`);
+    return response.data || response as BackendPortfolio;
+  },
+
+  async updateUserPortfolio(userId: number, portfolioData: Partial<BackendPortfolio>): Promise<BackendPortfolio> {
+    const response = await apiClient.put<BackendPortfolio>(`/api/admin/users/${userId}/portfolio`, portfolioData);
+    return response.data || response as BackendPortfolio;
+  },
+
+  async addPortfolioPosition(userId: number, positionData: {
+    symbol: string;
+    quantity: number;
+    price: number;
+  }): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(`/api/admin/users/${userId}/portfolio/positions`, positionData);
+    return response.data || response as { message: string };
+  },
+
+  // Global data
+  async getAllTransactions(page: number = 1, limit: number = 50): Promise<{ transactions: BackendTransaction[], total: number }> {
+    const response = await apiClient.get<{ transactions: BackendTransaction[], total: number }>(`/api/admin/transactions?page=${page}&limit=${limit}`);
+    return response.data || response as { transactions: BackendTransaction[], total: number };
+  },
+
+  async getAllPortfolios(page: number = 1, limit: number = 50): Promise<{ portfolios: BackendPortfolio[], total: number }> {
+    const response = await apiClient.get<{ portfolios: BackendPortfolio[], total: number }>(`/api/admin/portfolios?page=${page}&limit=${limit}`);
+    return response.data || response as { portfolios: BackendPortfolio[], total: number };
+  }
+};
+
+// Helper function to transform backend user to frontend AdminUser format
+export function transformBackendUser(backendUser: BackendUser, portfolio?: BackendPortfolio) {
+  return {
+    id: backendUser.id.toString(),
+    email: backendUser.email,
+    firstName: backendUser.first_name,
+    lastName: backendUser.last_name,
+    role: backendUser.role,
+    status: backendUser.status,
+    createdAt: new Date(backendUser.created_at),
+    lastLogin: backendUser.last_login ? new Date(backendUser.last_login) : undefined,
+    totalBalance: portfolio?.total_balance || 0,
+    portfolioValue: portfolio?.portfolio_value || 0,
+    totalTrades: portfolio?.total_trades || 0,
+    winRate: portfolio?.win_rate || 0
+  };
+}
