@@ -40,6 +40,14 @@ export default function createAuthRoutes(database: DatabaseManager) {
     await authController.refreshToken(req, res);
   });
 
+  router.post('/forgot-password', authLimiter, async (req: express.Request, res: express.Response) => {
+    await authController.forgotPassword(req, res);
+  });
+
+  router.post('/reset-password', authLimiter, async (req: express.Request, res: express.Response) => {
+    await authController.resetPassword(req, res);
+  });
+
   // Protected routes
   router.post('/logout', authenticateToken, async (req: express.Request, res: express.Response) => {
     await authController.logout(req, res);

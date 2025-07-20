@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 export const metadata: Metadata = {
   title: 'trade.im - Professional Trading Platform',
@@ -29,7 +30,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="font-primary bg-trade-navy text-white min-h-screen">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   )

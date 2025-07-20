@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Eye, 
@@ -15,6 +15,8 @@ import {
   Brain
 } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -29,6 +31,20 @@ export default function LoginPage() {
     password: '',
     general: ''
   })
+  
+  const { login, isAuthenticated, user } = useAuth()
+  const router = useRouter()
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'admin') {
+        router.push('/admin')
+      } else {
+        router.push('/dashboard')
+      }
+    }
+  }, [isAuthenticated, user, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -81,19 +97,22 @@ export default function LoginPage() {
     setErrors(prev => ({ ...prev, general: '' }))
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      const success = await login(formData.email, formData.password)
       
-      // Here you would typically make an API call to authenticate
-      console.log('Login attempt:', formData)
-      
-      // For demo purposes, redirect to dashboard
-      window.location.href = '/'
-      
+      if (success) {
+        // The useEffect will handle the redirect
+        return
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          general: 'Login failed. Please check your credentials and try again.'
+        }))
+      }
     } catch (error) {
+      console.error('Login error:', error)
       setErrors(prev => ({
         ...prev,
-        general: 'Login failed. Please check your credentials and try again.'
+        general: 'Network error. Please check your connection and try again.'
       }))
     } finally {
       setIsLoading(false)

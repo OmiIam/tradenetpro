@@ -210,6 +210,64 @@ export class AuthController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        res.status(400).json({ error: 'Email is required' });
+        return;
+      }
+
+      // Check if user exists
+      const user = this.userModel.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists or not for security
+        res.json({ message: 'If the email exists, a reset link has been sent' });
+        return;
+      }
+
+      // In a real implementation, you would:
+      // 1. Generate a reset token
+      // 2. Store it in the database with expiration
+      // 3. Send an email with the reset link
+      
+      // For now, return success message
+      res.json({ 
+        message: 'If the email exists, a reset link has been sent',
+        // In development, include the email for testing
+        ...(process.env.NODE_ENV === 'development' && { email: user.email })
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        res.status(400).json({ error: 'Token and new password are required' });
+        return;
+      }
+
+      // In a real implementation, you would:
+      // 1. Validate the reset token
+      // 2. Check if it's not expired
+      // 3. Find the user associated with the token
+      // 4. Update the password
+      // 5. Invalidate the token
+
+      // For now, return a placeholder response
+      res.json({ message: 'Password reset functionality is not fully implemented yet' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }
 
 export default AuthController;

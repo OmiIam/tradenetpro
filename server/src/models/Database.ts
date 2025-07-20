@@ -145,6 +145,31 @@ export class DatabaseManager {
       
       console.log('Default admin user created: admin@trade.im / admin123');
     }
+
+    // Check if test user already exists
+    const testUserExists = this.db.prepare('SELECT id FROM users WHERE email = ?').get('testuser@trade.im');
+    
+    if (!testUserExists) {
+      const testPassword = bcrypt.hashSync('testpass123', 10);
+      
+      // Insert test user
+      const insertTestUser = this.db.prepare(`
+        INSERT INTO users (email, password_hash, first_name, last_name, role, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      const testUserResult = insertTestUser.run('testuser@trade.im', testPassword, 'Test', 'User', 'user', 'active');
+      
+      // Create portfolio for test user
+      const insertTestPortfolio = this.db.prepare(`
+        INSERT INTO portfolios (user_id, total_balance, portfolio_value)
+        VALUES (?, ?, ?)
+      `);
+      
+      insertTestPortfolio.run(testUserResult.lastInsertRowid, 5000, 4800);
+      
+      console.log('Default test user created: testuser@trade.im / testpass123');
+    }
   }
 
   public getDatabase(): Database.Database {
