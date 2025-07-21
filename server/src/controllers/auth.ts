@@ -19,10 +19,11 @@ export class AuthController {
 
       // Basic validation
       if (!email || !password || !first_name || !last_name) {
-        return res.status(400).json({ 
+        res.status(400).json({ 
           error: 'Missing required fields',
           required: ['email', 'password', 'first_name', 'last_name']
         });
+        return;
       }
 
       console.log('=== REGISTRATION DEBUG START ===');
@@ -36,11 +37,13 @@ export class AuthController {
         console.log('Existing user check result:', existingUser ? 'USER EXISTS' : 'NO EXISTING USER');
       } catch (checkError) {
         console.error('Error checking existing user:', checkError);
-        return res.status(500).json({ error: 'Database connection error during user check' });
+        res.status(500).json({ error: 'Database connection error during user check' });
+        return;
       }
 
       if (existingUser) {
-        return res.status(400).json({ error: 'User already exists with this email' });
+        res.status(400).json({ error: 'User already exists with this email' });
+        return;
       }
 
       // Direct database approach - bypass UserModel
@@ -86,11 +89,12 @@ export class AuthController {
         const { password_hash, ...userResponse } = newUser;
         console.log('=== REGISTRATION DEBUG SUCCESS ===');
         
-        return res.status(201).json({
+        res.status(201).json({
           message: 'Registration successful!',
           user: userResponse,
           debug: 'Direct database insertion successful'
         });
+        return;
         
       } catch (dbError) {
         console.error('=== DATABASE ERROR DETAILS ===');
@@ -99,11 +103,12 @@ export class AuthController {
         console.error('Error stack:', dbError instanceof Error ? dbError.stack : 'No stack');
         console.error('=== END DATABASE ERROR ===');
         
-        return res.status(500).json({
+        res.status(500).json({
           error: 'Database operation failed',
           details: dbError instanceof Error ? dbError.message : 'Unknown database error',
           type: 'DIRECT_DB_ERROR'
         });
+        return;
       }
       
     } catch (error) {
@@ -111,11 +116,12 @@ export class AuthController {
       console.error('Error:', error);
       console.error('=== END GENERAL ERROR ===');
       
-      return res.status(500).json({ 
+      res.status(500).json({ 
         error: 'Registration failed',
         details: error instanceof Error ? error.message : 'Unknown error',
         type: 'GENERAL_ERROR'
       });
+      return;
     }
   }
 
