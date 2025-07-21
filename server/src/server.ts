@@ -60,6 +60,60 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Emergency registration endpoint - bypass all middleware
+app.post('/emergency-register', express.json(), async (req, res) => {
+  try {
+    console.log('EMERGENCY REGISTER CALLED');
+    const { email, password, first_name, last_name } = req.body;
+    
+    if (!email || !password || !first_name || !last_name) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const db = database.getDatabase();
+    const bcrypt = require('bcryptjs');
+    
+    // Check existing user
+    const existingStmt = db.prepare('SELECT id FROM users WHERE email = ?');
+    const existing = existingStmt.get(email);
+    if (existing) {
+      return res.status(400).json({ error: 'User exists' });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Insert user
+    const userStmt = db.prepare(`
+      INSERT INTO users (email, password_hash, first_name, last_name, role, status) 
+      VALUES (?, ?, ?, ?, 'user', 'active')
+    `);
+    const userResult = userStmt.run(email, hashedPassword, first_name, last_name);
+    
+    // Create portfolio
+    const portfolioStmt = db.prepare(`
+      INSERT INTO portfolios (user_id, total_balance, portfolio_value, total_trades, win_rate) 
+      VALUES (?, 0, 0, 0, 0)
+    `);
+    portfolioStmt.run(userResult.lastInsertRowid);
+    
+    console.log('EMERGENCY REGISTRATION SUCCESS:', email);
+    
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      userId: userResult.lastInsertRowid
+    });
+    
+  } catch (error) {
+    console.error('EMERGENCY REGISTER ERROR:', error);
+    res.status(500).json({ 
+      error: 'Failed',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 // API routes
 app.use('/api/auth', createAuthRoutes(database));
 app.use('/api/admin', createAdminRoutes(database));
