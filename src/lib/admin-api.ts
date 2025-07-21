@@ -92,9 +92,11 @@ export const adminApi = {
 
   // Balance management
   async adjustBalance(userId: number, amount: number, type: 'credit' | 'debit', description: string): Promise<{ message: string }> {
+    // Map 'credit' to 'add' and 'debit' to 'subtract' for backend compatibility
+    const backendType = type === 'credit' ? 'add' : type === 'debit' ? 'subtract' : type;
     const response = await apiClient.post<{ message: string }>(`/api/admin/users/${userId}/balance`, {
       amount,
-      type,
+      type: backendType,
       description
     });
     return response.data || response as { message: string };
