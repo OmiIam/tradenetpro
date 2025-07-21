@@ -8,6 +8,7 @@ import createAuthRoutes from './routes/auth';
 import createAdminRoutes from './routes/admin';
 import createUserRoutes from './routes/user';
 import verificationRoutes from './routes/verification';
+import createDebugRoutes from './routes/debug';
 
 // Load environment variables
 dotenv.config();
@@ -64,6 +65,7 @@ app.use('/api/auth', createAuthRoutes(database));
 app.use('/api/admin', createAdminRoutes(database));
 app.use('/api/user', createUserRoutes(database));
 app.use('/api/verification', verificationRoutes);
+app.use('/api/debug', createDebugRoutes(database));
 
 // API documentation endpoint
 app.get('/api', (req, res) => {
