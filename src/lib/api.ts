@@ -23,8 +23,31 @@ class ApiClient {
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+        console.error('API Error Response:', {
+          status: response.status,
+          url: response.url,
+          error: errorData
+        });
+      } catch (parseError) {
+        console.error('Failed to parse error response:', parseError);
+      }
+      
+      // Add specific error messages for common status codes
+      if (response.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
+      } else if (response.status === 403) {
+        errorMessage = 'Access denied. Admin privileges required.';
+      } else if (response.status === 404) {
+        errorMessage = 'Resource not found.';
+      } else if (response.status >= 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();

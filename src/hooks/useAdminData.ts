@@ -29,8 +29,13 @@ export function useAdminStats() {
       
       setStats(frontendStats);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch admin stats');
-      console.error('Failed to fetch admin stats:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch admin stats';
+      setError(errorMessage);
+      console.error('Failed to fetch admin stats:', {
+        error: err,
+        message: errorMessage,
+        timestamp: new Date().toISOString()
+      });
     } finally {
       setLoading(false);
     }
@@ -80,8 +85,15 @@ export function useAdminUsers() {
         total: response.total
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch users');
-      console.error('Failed to fetch users:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch users';
+      setError(errorMessage);
+      console.error('Failed to fetch users:', {
+        error: err,
+        message: errorMessage,
+        page,
+        limit,
+        timestamp: new Date().toISOString()
+      });
     } finally {
       setLoading(false);
     }
@@ -89,44 +101,81 @@ export function useAdminUsers() {
 
   const updateUser = useCallback(async (userId: string, userData: Partial<BackendUser>) => {
     try {
+      console.log('Updating user:', { userId, userData });
       await adminApi.updateUser(parseInt(userId), userData);
       // Refetch users to get updated data
       await fetchUsers(pagination.page, pagination.limit);
+      console.log('User updated successfully:', userId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update user';
+      setError(errorMessage);
+      console.error('Failed to update user:', {
+        error: err,
+        userId,
+        userData,
+        timestamp: new Date().toISOString()
+      });
       throw err;
     }
   }, [fetchUsers, pagination.page, pagination.limit]);
 
   const deleteUser = useCallback(async (userId: string) => {
     try {
+      console.log('Deleting user:', userId);
       await adminApi.deleteUser(parseInt(userId));
       // Refetch users to get updated list
       await fetchUsers(pagination.page, pagination.limit);
+      console.log('User deleted successfully:', userId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete user';
+      setError(errorMessage);
+      console.error('Failed to delete user:', {
+        error: err,
+        userId,
+        timestamp: new Date().toISOString()
+      });
       throw err;
     }
   }, [fetchUsers, pagination.page, pagination.limit]);
 
   const toggleUserStatus = useCallback(async (userId: string, status: 'active' | 'suspended') => {
     try {
+      console.log('Toggling user status:', { userId, status });
       await adminApi.toggleUserStatus(parseInt(userId), status);
       // Refetch users to get updated data
       await fetchUsers(pagination.page, pagination.limit);
+      console.log('User status updated successfully:', { userId, status });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user status');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update user status';
+      setError(errorMessage);
+      console.error('Failed to update user status:', {
+        error: err,
+        userId,
+        status,
+        timestamp: new Date().toISOString()
+      });
       throw err;
     }
   }, [fetchUsers, pagination.page, pagination.limit]);
 
   const adjustBalance = useCallback(async (userId: string, amount: number, type: 'credit' | 'debit', description: string) => {
     try {
+      console.log('Adjusting balance:', { userId, amount, type, description });
       await adminApi.adjustBalance(parseInt(userId), amount, type, description);
       // Refetch users to get updated balance data
       await fetchUsers(pagination.page, pagination.limit);
+      console.log('Balance adjusted successfully:', { userId, amount, type });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to adjust balance');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to adjust balance';
+      setError(errorMessage);
+      console.error('Failed to adjust balance:', {
+        error: err,
+        userId,
+        amount,
+        type,
+        description,
+        timestamp: new Date().toISOString()
+      });
       throw err;
     }
   }, [fetchUsers, pagination.page, pagination.limit]);

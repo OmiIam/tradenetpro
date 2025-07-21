@@ -66,8 +66,24 @@ export const adminApi = {
 
   // User management
   async getUsers(page: number = 1, limit: number = 10): Promise<{ users: BackendUser[], total: number }> {
-    const response = await apiClient.get<{ users: BackendUser[], total: number }>(`/api/admin/users?page=${page}&limit=${limit}`);
-    return response.data || response as { users: BackendUser[], total: number };
+    // Convert page to offset for backend compatibility
+    const offset = (page - 1) * limit;
+    const response = await apiClient.get<{ users: BackendUser[], pagination: { total: number } }>(`/api/admin/users?offset=${offset}&limit=${limit}`);
+    
+    // Handle both possible response formats
+    if (response.data) {
+      return {
+        users: response.data.users,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      // Handle direct response format
+      const directResponse = response as any;
+      return {
+        users: directResponse.users || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
   },
 
   async getUserById(userId: number): Promise<BackendUser> {
@@ -103,8 +119,21 @@ export const adminApi = {
   },
 
   async getUserTransactions(userId: number, page: number = 1, limit: number = 20): Promise<{ transactions: BackendTransaction[], total: number }> {
-    const response = await apiClient.get<{ transactions: BackendTransaction[], total: number }>(`/api/admin/users/${userId}/transactions?page=${page}&limit=${limit}`);
-    return response.data || response as { transactions: BackendTransaction[], total: number };
+    const offset = (page - 1) * limit;
+    const response = await apiClient.get<{ transactions: BackendTransaction[], pagination: { total: number } }>(`/api/admin/users/${userId}/transactions?offset=${offset}&limit=${limit}`);
+    
+    if (response.data) {
+      return {
+        transactions: response.data.transactions,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      const directResponse = response as any;
+      return {
+        transactions: directResponse.transactions || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
   },
 
   async createTransaction(userId: number, transactionData: {
@@ -138,13 +167,39 @@ export const adminApi = {
 
   // Global data
   async getAllTransactions(page: number = 1, limit: number = 50): Promise<{ transactions: BackendTransaction[], total: number }> {
-    const response = await apiClient.get<{ transactions: BackendTransaction[], total: number }>(`/api/admin/transactions?page=${page}&limit=${limit}`);
-    return response.data || response as { transactions: BackendTransaction[], total: number };
+    const offset = (page - 1) * limit;
+    const response = await apiClient.get<{ transactions: BackendTransaction[], pagination: { total: number } }>(`/api/admin/transactions?offset=${offset}&limit=${limit}`);
+    
+    if (response.data) {
+      return {
+        transactions: response.data.transactions,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      const directResponse = response as any;
+      return {
+        transactions: directResponse.transactions || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
   },
 
   async getAllPortfolios(page: number = 1, limit: number = 50): Promise<{ portfolios: BackendPortfolio[], total: number }> {
-    const response = await apiClient.get<{ portfolios: BackendPortfolio[], total: number }>(`/api/admin/portfolios?page=${page}&limit=${limit}`);
-    return response.data || response as { portfolios: BackendPortfolio[], total: number };
+    const offset = (page - 1) * limit;
+    const response = await apiClient.get<{ portfolios: BackendPortfolio[], pagination: { total: number } }>(`/api/admin/portfolios?offset=${offset}&limit=${limit}`);
+    
+    if (response.data) {
+      return {
+        portfolios: response.data.portfolios,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      const directResponse = response as any;
+      return {
+        portfolios: directResponse.portfolios || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
   }
 };
 
