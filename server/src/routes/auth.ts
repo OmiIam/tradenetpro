@@ -27,7 +27,7 @@ const registerLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // limit each IP to 3 login attempts per windowMs
+  max: 1000, // increased limit for development
   message: 'Too many login attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
