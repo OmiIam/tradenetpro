@@ -62,13 +62,10 @@ export class AuthController {
       // Create user with status pending_verification
       const user = await this.userModel.createUser(userData);
 
-      // Try to send verification email (don't fail registration if email fails)
+      // Skip email verification for now due to deployment issues
       let emailSent = false;
-      try {
-        emailSent = await this.verificationService.sendEmailVerification(user.id);
-      } catch (emailError) {
-        console.warn('Failed to send verification email:', emailError);
-      }
+      // TODO: Re-enable email verification once email service is properly configured
+      console.log('Email verification temporarily disabled for user:', user.email);
 
       // Don't send password hash in response
       const { password_hash, ...userResponse } = user;
