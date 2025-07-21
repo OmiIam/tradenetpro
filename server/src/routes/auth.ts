@@ -10,8 +10,17 @@ const router = express.Router();
 // Rate limiting for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: 20, // limit each IP to 20 requests per windowMs (increased for testing)
   message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// More lenient rate limiting for registration during testing
+const registerLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10, // limit each IP to 10 registration attempts per 5 minutes
+  message: 'Too many registration attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -28,7 +37,7 @@ export default function createAuthRoutes(database: DatabaseManager) {
   const authController = new AuthController(database);
 
   // Public routes
-  router.post('/register', authLimiter, validateRegistration, async (req: express.Request, res: express.Response) => {
+  router.post('/register', registerLimiter, validateRegistration, async (req: express.Request, res: express.Response) => {
     await authController.register(req, res);
   });
 
