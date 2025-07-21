@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { Bitcoin, DollarSign, ArrowDownLeft, ArrowUpRight, Copy, CheckCircle, XCircle } from 'lucide-react';
 
