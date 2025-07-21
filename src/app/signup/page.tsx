@@ -166,17 +166,26 @@ export default function SignUpPage() {
         }),
       })
 
-      const data = await response.json()
+      let data: any = {};
+      let errorText = '';
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        errorText = await response.text();
+      }
 
       if (response.ok) {
         // Account created successfully
         alert('Account created successfully! Please check your email for verification instructions.')
         window.location.href = '/login'
       } else {
-        // Handle backend validation errors
+        let errorMsg = data.error || errorText || 'Account creation failed. Please try again.';
+        if (response.status === 429) {
+          errorMsg = 'Too many signup attempts. Please wait a few minutes and try again.';
+        }
         setErrors(prev => ({
           ...prev,
-          general: data.error || 'Account creation failed. Please try again.'
+          general: errorMsg
         }))
       }
       
