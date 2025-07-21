@@ -149,19 +149,42 @@ export default function SignUpPage() {
     setErrors(prev => ({ ...prev, general: '' }))
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Here you would typically make an API call to create account
-      console.log('Sign up attempt:', formData)
-      
-      // For demo purposes, redirect to login
-      window.location.href = '/login'
+      // Make real API call to create account
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone_number: formData.phone,
+          terms_accepted: formData.agreeToTerms,
+          privacy_accepted: true
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Account created successfully
+        alert('Account created successfully! Please check your email for verification instructions.')
+        window.location.href = '/login'
+      } else {
+        // Handle backend validation errors
+        setErrors(prev => ({
+          ...prev,
+          general: data.error || 'Account creation failed. Please try again.'
+        }))
+      }
       
     } catch (error) {
+      console.error('Signup error:', error)
       setErrors(prev => ({
         ...prev,
-        general: 'Account creation failed. Please try again.'
+        general: 'Network error. Please check your connection and try again.'
       }))
     } finally {
       setIsLoading(false)

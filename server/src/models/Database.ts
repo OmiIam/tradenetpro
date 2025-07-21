@@ -244,13 +244,38 @@ export class DatabaseManager {
         1, 0, 1, 1, 'pending', 1
       );
       
-      // Create portfolio for test user
+      // Create portfolio for test user with realistic data
       const insertTestPortfolio = this.db.prepare(`
-        INSERT INTO portfolios (user_id, total_balance, portfolio_value)
-        VALUES (?, ?, ?)
+        INSERT INTO portfolios (user_id, total_balance, portfolio_value, total_trades, win_rate)
+        VALUES (?, ?, ?, ?, ?)
       `);
       
-      insertTestPortfolio.run(testUserResult.lastInsertRowid, 5000, 4800);
+      const testPortfolioResult = insertTestPortfolio.run(testUserResult.lastInsertRowid, 5000, 5234.56, 12, 78.5);
+      
+      // Add sample portfolio positions for test user
+      const insertPosition = this.db.prepare(`
+        INSERT INTO portfolio_positions (portfolio_id, symbol, quantity, average_price, current_price, position_type)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      // Sample stock positions
+      insertPosition.run(testPortfolioResult.lastInsertRowid, 'AAPL', 10, 185.20, 190.45, 'long');
+      insertPosition.run(testPortfolioResult.lastInsertRowid, 'MSFT', 5, 378.90, 382.15, 'long');
+      insertPosition.run(testPortfolioResult.lastInsertRowid, 'GOOGL', 8, 142.56, 145.78, 'long');
+      insertPosition.run(testPortfolioResult.lastInsertRowid, 'TSLA', 3, 245.80, 248.90, 'long');
+      
+      // Add sample transactions for test user
+      const insertTransaction = this.db.prepare(`
+        INSERT INTO transactions (user_id, type, amount, description)
+        VALUES (?, ?, ?, ?)
+      `);
+      
+      // Sample transaction history
+      insertTransaction.run(testUserResult.lastInsertRowid, 'deposit', 5000, 'Initial funding');
+      insertTransaction.run(testUserResult.lastInsertRowid, 'trade', -1852, 'Purchased 10 shares of AAPL');
+      insertTransaction.run(testUserResult.lastInsertRowid, 'trade', -1894.50, 'Purchased 5 shares of MSFT');
+      insertTransaction.run(testUserResult.lastInsertRowid, 'trade', -1140.48, 'Purchased 8 shares of GOOGL');
+      insertTransaction.run(testUserResult.lastInsertRowid, 'trade', -737.40, 'Purchased 3 shares of TSLA');
       
       console.log('Default test user created: testuser@trade.im / testpass123');
     }
