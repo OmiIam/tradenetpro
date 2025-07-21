@@ -15,89 +15,106 @@ export class AuthController {
 
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { 
-        email, 
-        password, 
-        first_name, 
-        last_name, 
-        phone_number,
-        date_of_birth,
-        address_line_1,
-        address_line_2,
-        city,
-        state,
-        postal_code,
-        country,
-        terms_accepted,
-        privacy_accepted,
-        role 
-      } = req.body;
+      const { email, password, first_name, last_name } = req.body;
+
+      // Basic validation
+      if (!email || !password || !first_name || !last_name) {
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          required: ['email', 'password', 'first_name', 'last_name']
+        });
+      }
+
+      console.log('=== REGISTRATION DEBUG START ===');
+      console.log('Input data:', { email, first_name, last_name });
 
       // Check if user already exists
-      const existingUser = this.userModel.getUserByEmail(email);
-      if (existingUser) {
-        res.status(400).json({ error: 'User already exists with this email' });
-        return;
-      }
-
-      // Create user data with basic fields only
-      const userData: CreateUserData = {
-        email,
-        password,
-        first_name,
-        last_name,
-        role: role || 'user'
-      };
-
-      // Create user with detailed error logging
-      console.log('Creating user with data:', { email, first_name, last_name, role: role || 'user' });
-      
-      let user;
+      console.log('Checking for existing user...');
+      let existingUser;
       try {
-        user = await this.userModel.createUser(userData);
-        console.log('User created successfully with ID:', user.id);
-      } catch (userCreationError) {
-        console.error('DETAILED USER CREATION ERROR:', {
-          error: userCreationError,
-          message: userCreationError instanceof Error ? userCreationError.message : 'Unknown error',
-          stack: userCreationError instanceof Error ? userCreationError.stack : 'No stack trace',
-          userData: userData
-        });
-        throw userCreationError; // Re-throw to be caught by outer catch
+        existingUser = this.userModel.getUserByEmail(email);
+        console.log('Existing user check result:', existingUser ? 'USER EXISTS' : 'NO EXISTING USER');
+      } catch (checkError) {
+        console.error('Error checking existing user:', checkError);
+        return res.status(500).json({ error: 'Database connection error during user check' });
       }
 
-      // Skip email verification for now due to deployment issues
-      let emailSent = false;
-      console.log('Email verification temporarily disabled for user:', user.email);
+      if (existingUser) {
+        return res.status(400).json({ error: 'User already exists with this email' });
+      }
 
-      // Don't send password hash in response
-      const { password_hash, ...userResponse } = user;
-
-      res.status(201).json({
-        message: 'Registration successful! Please check your email to verify your account.',
-        user: userResponse,
-        verification_email_sent: emailSent,
-        next_steps: [
-          'Check your email for verification link',
-          'Complete your profile information',
-          'Wait for admin approval',
-          'Account will be funded by admin to start trading'
-        ]
-      });
-    } catch (error) {
-      console.error('FULL REGISTRATION ERROR DETAILS:', {
-        error,
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : 'No stack',
-        cause: error instanceof Error ? error.cause : 'No cause'
-      });
+      // Direct database approach - bypass UserModel
+      console.log('Starting direct database insertion...');
+      try {
+        const db = this.userModel['db']; // Access private db property
+        
+        // Hash password
+        console.log('Hashing password...');
+        const hashedPassword = await require('bcryptjs').hash(password, 10);
+        console.log('Password hashed successfully');
+        
+        // Insert user directly
+        console.log('Inserting user into database...');
+        const userStmt = db.prepare(`
+          INSERT INTO users (email, password_hash, first_name, last_name, role, status) 
+          VALUES (?, ?, ?, ?, 'user', 'active')
+        `);
+        
+        const userResult = userStmt.run(email, hashedPassword, first_name, last_name);
+        const userId = userResult.lastInsertRowid;
+        console.log('User inserted with ID:', userId);
+        
+        // Create portfolio
+        console.log('Creating portfolio...');
+        const portfolioStmt = db.prepare(`
+          INSERT INTO portfolios (user_id, total_balance, portfolio_value, total_trades, win_rate) 
+          VALUES (?, 0, 0, 0, 0)
+        `);
+        
+        const portfolioResult = portfolioStmt.run(userId);
+        console.log('Portfolio created with ID:', portfolioResult.lastInsertRowid);
+        
+        // Get created user
+        const newUser = this.userModel.getUserById(userId as number);
+        console.log('Retrieved created user:', newUser ? 'SUCCESS' : 'FAILED');
+        
+        if (!newUser) {
+          throw new Error('Failed to retrieve created user');
+        }
+        
+        // Success response
+        const { password_hash, ...userResponse } = newUser;
+        console.log('=== REGISTRATION DEBUG SUCCESS ===');
+        
+        return res.status(201).json({
+          message: 'Registration successful!',
+          user: userResponse,
+          debug: 'Direct database insertion successful'
+        });
+        
+      } catch (dbError) {
+        console.error('=== DATABASE ERROR DETAILS ===');
+        console.error('Error name:', dbError instanceof Error ? dbError.name : 'Unknown');
+        console.error('Error message:', dbError instanceof Error ? dbError.message : String(dbError));
+        console.error('Error stack:', dbError instanceof Error ? dbError.stack : 'No stack');
+        console.error('=== END DATABASE ERROR ===');
+        
+        return res.status(500).json({
+          error: 'Database operation failed',
+          details: dbError instanceof Error ? dbError.message : 'Unknown database error',
+          type: 'DIRECT_DB_ERROR'
+        });
+      }
       
-      // Return detailed error in development
-      res.status(500).json({ 
+    } catch (error) {
+      console.error('=== GENERAL REGISTRATION ERROR ===');
+      console.error('Error:', error);
+      console.error('=== END GENERAL ERROR ===');
+      
+      return res.status(500).json({ 
         error: 'Registration failed',
         details: error instanceof Error ? error.message : 'Unknown error',
-        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : 'No stack') : undefined
+        type: 'GENERAL_ERROR'
       });
     }
   }
