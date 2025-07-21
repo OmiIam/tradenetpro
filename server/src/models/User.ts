@@ -82,39 +82,68 @@ export class UserModel {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
       console.log('Password hashed successfully');
       
-      // Use basic user creation for now - only required fields
+      // Use minimal required fields only, matching database schema
       const stmt = this.db.prepare(`
-        INSERT INTO users (email, password_hash, first_name, last_name, role)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (
+          email, 
+          password_hash, 
+          first_name, 
+          last_name, 
+          role, 
+          status,
+          email_verified,
+          phone_verified,
+          terms_accepted,
+          privacy_accepted,
+          account_funded
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       console.log('SQL statement prepared');
 
+      // Ensure all values are proper SQLite types (strings, numbers, null)
       const result = stmt.run(
-        userData.email,
-        hashedPassword,
-        userData.first_name,
-        userData.last_name,
-        userData.role || 'user'
+        String(userData.email),
+        String(hashedPassword),
+        String(userData.first_name),
+        String(userData.last_name),
+        String(userData.role || 'user'),
+        'active',  // status as string
+        0,         // email_verified as 0/1 integer
+        0,         // phone_verified as 0/1 integer  
+        1,         // terms_accepted as 1 (assuming they accepted)
+        1,         // privacy_accepted as 1 (assuming they accepted)
+        0          // account_funded as 0/1 integer
       );
       console.log('User inserted with ID:', result.lastInsertRowid);
 
-      // Create a portfolio for the new user
+      // Create a portfolio for the new user with all required fields
       const portfolioStmt = this.db.prepare(`
-        INSERT INTO portfolios (user_id, total_balance, portfolio_value)
-        VALUES (?, ?, ?)
+        INSERT INTO portfolios (user_id, total_balance, portfolio_value, total_trades, win_rate)
+        VALUES (?, ?, ?, ?, ?)
       `);
       
-      const portfolioResult = portfolioStmt.run(result.lastInsertRowid, 0, 0);
+      const portfolioResult = portfolioStmt.run(
+        Number(result.lastInsertRowid), 
+        0,  // total_balance
+        0,  // portfolio_value
+        0,  // total_trades
+        0   // win_rate
+      );
       console.log('Portfolio created for user:', result.lastInsertRowid);
 
       const newUser = this.getUserById(result.lastInsertRowid as number);
       console.log('Retrieved created user:', newUser?.email);
       
-      return newUser!;
+      if (!newUser) {
+        throw new Error('Failed to retrieve newly created user');
+      }
+      
+      return newUser;
     } catch (error) {
       console.error('Error in UserModel.createUser:', {
         error,
-        userData: userData,
+        userData: { ...userData, password: '[REDACTED]' },
         message: error instanceof Error ? error.message : 'Unknown error'
       });
       throw error;
