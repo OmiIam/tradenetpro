@@ -40,22 +40,12 @@ export class AuthController {
         return;
       }
 
-      // Create user data with enhanced fields
+      // Create user data with basic fields only
       const userData: CreateUserData = {
         email,
         password,
         first_name,
         last_name,
-        phone_number,
-        date_of_birth,
-        address_line_1,
-        address_line_2,
-        city,
-        state,
-        postal_code,
-        country,
-        terms_accepted: terms_accepted || false,
-        privacy_accepted: privacy_accepted || false,
         role: role || 'user'
       };
 
