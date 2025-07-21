@@ -76,44 +76,49 @@ export class UserModel {
   }
 
   async createUser(userData: CreateUserData): Promise<User> {
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    console.log('UserModel.createUser called with:', userData);
     
-    const stmt = this.db.prepare(`
-      INSERT INTO users (
-        email, password_hash, first_name, last_name, phone_number, 
-        date_of_birth, address_line_1, address_line_2, city, state, 
-        postal_code, country, role, terms_accepted, privacy_accepted
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    try {
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      console.log('Password hashed successfully');
+      
+      // Use basic user creation for now - only required fields
+      const stmt = this.db.prepare(`
+        INSERT INTO users (email, password_hash, first_name, last_name, role)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      console.log('SQL statement prepared');
 
-    const result = stmt.run(
-      userData.email,
-      hashedPassword,
-      userData.first_name,
-      userData.last_name,
-      userData.phone_number || null,
-      userData.date_of_birth || null,
-      userData.address_line_1 || null,
-      userData.address_line_2 || null,
-      userData.city || null,
-      userData.state || null,
-      userData.postal_code || null,
-      userData.country || null,
-      userData.role || 'user',
-      userData.terms_accepted || false,
-      userData.privacy_accepted || false
-    );
+      const result = stmt.run(
+        userData.email,
+        hashedPassword,
+        userData.first_name,
+        userData.last_name,
+        userData.role || 'user'
+      );
+      console.log('User inserted with ID:', result.lastInsertRowid);
 
-    // Create a portfolio for the new user
-    const portfolioStmt = this.db.prepare(`
-      INSERT INTO portfolios (user_id, total_balance, portfolio_value)
-      VALUES (?, ?, ?)
-    `);
-    
-    portfolioStmt.run(result.lastInsertRowid, 0, 0); // Start with $0 balance - admin must fund account
+      // Create a portfolio for the new user
+      const portfolioStmt = this.db.prepare(`
+        INSERT INTO portfolios (user_id, total_balance, portfolio_value)
+        VALUES (?, ?, ?)
+      `);
+      
+      const portfolioResult = portfolioStmt.run(result.lastInsertRowid, 0, 0);
+      console.log('Portfolio created for user:', result.lastInsertRowid);
 
-    return this.getUserById(result.lastInsertRowid as number)!;
+      const newUser = this.getUserById(result.lastInsertRowid as number);
+      console.log('Retrieved created user:', newUser?.email);
+      
+      return newUser!;
+    } catch (error) {
+      console.error('Error in UserModel.createUser:', {
+        error,
+        userData: userData,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
   }
 
   getUserById(id: number): User | null {

@@ -49,12 +49,25 @@ export class AuthController {
         role: role || 'user'
       };
 
-      // Create user with status pending_verification
-      const user = await this.userModel.createUser(userData);
+      // Create user with detailed error logging
+      console.log('Creating user with data:', { email, first_name, last_name, role: role || 'user' });
+      
+      let user;
+      try {
+        user = await this.userModel.createUser(userData);
+        console.log('User created successfully with ID:', user.id);
+      } catch (userCreationError) {
+        console.error('DETAILED USER CREATION ERROR:', {
+          error: userCreationError,
+          message: userCreationError instanceof Error ? userCreationError.message : 'Unknown error',
+          stack: userCreationError instanceof Error ? userCreationError.stack : 'No stack trace',
+          userData: userData
+        });
+        throw userCreationError; // Re-throw to be caught by outer catch
+      }
 
       // Skip email verification for now due to deployment issues
       let emailSent = false;
-      // TODO: Re-enable email verification once email service is properly configured
       console.log('Email verification temporarily disabled for user:', user.email);
 
       // Don't send password hash in response
