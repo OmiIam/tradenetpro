@@ -34,9 +34,39 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration
+// CORS configuration - allow multiple origins for development flexibility
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001', 
+  'https://www.tradenet.im',
+  'https://tradenet.im',
+  'https://internet-banking-production-1364.up.railway.app'
+];
+
+// Add custom CORS_ORIGIN if provided
+if (process.env.CORS_ORIGIN) {
+  const customOrigins = process.env.CORS_ORIGIN.split(',');
+  allowedOrigins.push(...customOrigins);
+}
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // In development, allow all origins
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Block the request
+    const msg = `The CORS policy for this site does not allow access from the specified origin: ${origin}`;
+    return callback(new Error(msg), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -74,7 +104,7 @@ app.post('/emergency-register', express.json(), async (req, res) => {
     }
     
     const db = database.getDatabase();
-    const bcrypt = require('bcryptjs');
+    const bcrypt = (await import('bcryptjs')).default;
     
     // Check existing user
     const existingStmt = db.prepare('SELECT id FROM users WHERE email = ?');

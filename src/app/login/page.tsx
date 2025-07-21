@@ -32,7 +32,7 @@ export default function LoginPage() {
     general: ''
   })
   
-  const { login, isAuthenticated, user } = useAuth()
+  const { login, isAuthenticated, user, error: authError, clearError } = useAuth()
   const router = useRouter()
 
   // Redirect if already authenticated
@@ -59,6 +59,11 @@ export default function LoginPage() {
         ...prev,
         [name]: ''
       }))
+    }
+    
+    // Clear auth context error
+    if (authError) {
+      clearError()
     }
   }
 
@@ -95,17 +100,19 @@ export default function LoginPage() {
 
     setIsLoading(true)
     setErrors(prev => ({ ...prev, general: '' }))
+    clearError()
 
     try {
-      const success = await login(formData.email, formData.password)
+      const result = await login(formData.email, formData.password)
       
-      if (success) {
+      if (result.success) {
         // The useEffect will handle the redirect
         return
       } else {
+        // Use the specific error from the auth context
         setErrors(prev => ({
           ...prev,
-          general: 'Login failed. Please check your credentials and try again.'
+          general: result.error || 'Login failed. Please check your credentials and try again.'
         }))
       }
     } catch (error) {
@@ -182,14 +189,14 @@ export default function LoginPage() {
             className="mt-8 space-y-6"
           >
             {/* General Error */}
-            {errors.general && (
+            {(errors.general || authError) && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center space-x-2"
               >
                 <AlertCircle className="w-5 h-5 text-red-400" />
-                <span className="text-red-400 text-sm">{errors.general}</span>
+                <span className="text-red-400 text-sm">{errors.general || authError}</span>
               </motion.div>
             )}
 
