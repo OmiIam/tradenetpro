@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { api } from '@/lib/api'
+import api from '@/lib/api'
 
 export interface UserPortfolio {
   totalBalance: number
@@ -65,7 +65,7 @@ export function useUserDashboard() {
     try {
       setLoading(true)
       const response = await api.get('/api/user/dashboard')
-      setDashboardData(response.data)
+      setDashboardData(response.data as DashboardData)
       setError(null)
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err)
@@ -96,7 +96,7 @@ export function useMarketData() {
     try {
       setLoading(true)
       const response = await api.get('/api/user/market-data')
-      setMarketData(response.data)
+      setMarketData(response.data as MarketData)
       setError(null)
     } catch (err: any) {
       console.error('Error fetching market data:', err)
@@ -132,7 +132,7 @@ export function useUserProfile() {
     try {
       setLoading(true)
       const response = await api.get('/api/user/profile')
-      setProfile(response.data.user)
+      setProfile((response.data as any).user)
       setError(null)
     } catch (err: any) {
       console.error('Error fetching profile:', err)
@@ -145,7 +145,7 @@ export function useUserProfile() {
   const updateProfile = async (profileData: any) => {
     try {
       const response = await api.put('/api/user/profile', profileData)
-      setProfile(response.data.user)
+      setProfile((response.data as any).user)
       return response.data
     } catch (err: any) {
       console.error('Error updating profile:', err)
