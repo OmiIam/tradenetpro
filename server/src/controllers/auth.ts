@@ -85,8 +85,20 @@ export class AuthController {
         ]
       });
     } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('FULL REGISTRATION ERROR DETAILS:', {
+        error,
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack',
+        cause: error instanceof Error ? error.cause : 'No cause'
+      });
+      
+      // Return detailed error in development
+      res.status(500).json({ 
+        error: 'Registration failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : 'No stack') : undefined
+      });
     }
   }
 
