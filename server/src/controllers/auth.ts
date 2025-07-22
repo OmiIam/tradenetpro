@@ -53,7 +53,8 @@ export class AuthController {
         
         // Hash password
         console.log('Hashing password...');
-        const hashedPassword = await require('bcryptjs').hash(password, 10);
+        const bcrypt = await import('bcryptjs');
+        const hashedPassword = await bcrypt.default.hash(password, 10);
         console.log('Password hashed successfully');
         
         // Insert user directly
