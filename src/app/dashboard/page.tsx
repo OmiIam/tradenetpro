@@ -91,11 +91,11 @@ export default function Dashboard() {
           {/* Stats Cards - Using Real Data */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StatsCard
-              title="Portfolio Value"
-              value={`$${dashboardData?.portfolio.portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`}
+              title="Account Value"
+              value={`$${((dashboardData?.portfolio.totalBalance || 0) + (dashboardData?.portfolio.portfolioValue || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               change={dashboardData?.portfolio.totalReturn || 0}
-              changePercent={dashboardData?.portfolio.portfolioValue 
-                ? ((dashboardData.portfolio.totalReturn / dashboardData.portfolio.portfolioValue) * 100) 
+              changePercent={dashboardData?.portfolio.totalBalance 
+                ? ((dashboardData.portfolio.totalReturn / dashboardData.portfolio.totalBalance) * 100) 
                 : 0}
               icon={<DollarSign className="w-5 h-5" />}
             />
