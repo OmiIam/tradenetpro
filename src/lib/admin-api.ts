@@ -86,6 +86,28 @@ export const adminApi = {
     }
   },
 
+  // Optimized endpoint that fetches users with portfolio data in a single call
+  async getUsersWithPortfolios(page: number = 1, limit: number = 10): Promise<{ users: (BackendUser & BackendPortfolio)[], total: number }> {
+    // Convert page to offset for backend compatibility
+    const offset = (page - 1) * limit;
+    const response = await apiClient.get<{ users: (BackendUser & BackendPortfolio)[], pagination: { total: number } }>(`/api/admin/users-with-portfolios?offset=${offset}&limit=${limit}`);
+    
+    // Handle both possible response formats
+    if (response.data) {
+      return {
+        users: response.data.users,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      // Handle direct response format
+      const directResponse = response as any;
+      return {
+        users: directResponse.users || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
+  },
+
   async getUserById(userId: number): Promise<BackendUser> {
     const response = await apiClient.get<BackendUser>(`/api/admin/users/${userId}`);
     return response.data || response as BackendUser;

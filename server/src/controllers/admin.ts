@@ -75,6 +75,33 @@ export class AdminController {
     }
   }
 
+  // Optimized endpoint to get users with portfolio data in a single call
+  async getAllUsersWithPortfolios(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const usersWithPortfolios = this.userModel.getAllUsersWithPortfolios(limit, offset);
+      const totalCount = this.userModel.getUsersCount();
+
+      // Remove password hashes from response
+      const safeUsers = usersWithPortfolios.map(({ password_hash, ...user }) => user);
+
+      res.json({
+        users: safeUsers,
+        pagination: {
+          total: totalCount,
+          limit,
+          offset,
+          hasMore: offset + limit < totalCount
+        }
+      });
+    } catch (error) {
+      console.error('Get all users with portfolios error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
   async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const userId = parseInt(req.params.userId);

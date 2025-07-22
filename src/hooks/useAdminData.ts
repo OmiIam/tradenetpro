@@ -63,22 +63,26 @@ export function useAdminUsers() {
       setLoading(true);
       setError(null);
       
-      const response = await adminApi.getUsers(page, limit);
+      // Use optimized endpoint that fetches users with portfolio data in a single call
+      const response = await adminApi.getUsersWithPortfolios(page, limit);
       
-      // Get portfolio data for each user (this could be optimized with a bulk endpoint)
-      const usersWithPortfolios = await Promise.all(
-        response.users.map(async (user) => {
-          try {
-            const portfolio = await adminApi.getUserPortfolio(user.id);
-            return transformBackendUser(user, portfolio);
-          } catch {
-            // If portfolio fetch fails, return user without portfolio data
-            return transformBackendUser(user);
-          }
-        })
-      );
+      // Transform the combined user+portfolio data
+      const transformedUsers = response.users.map((userWithPortfolio) => {
+        // Extract portfolio fields from the combined data
+        const portfolio = {
+          total_balance: userWithPortfolio.total_balance,
+          portfolio_value: userWithPortfolio.portfolio_value,
+          total_trades: userWithPortfolio.total_trades,
+          win_rate: userWithPortfolio.win_rate
+        };
+        
+        // Create user object without portfolio fields
+        const { total_balance, portfolio_value, total_trades, win_rate, ...user } = userWithPortfolio;
+        
+        return transformBackendUser(user as BackendUser, portfolio as BackendPortfolio);
+      });
       
-      setUsers(usersWithPortfolios);
+      setUsers(transformedUsers);
       setPagination({
         page,
         limit,

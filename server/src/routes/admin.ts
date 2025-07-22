@@ -19,7 +19,7 @@ const router = express.Router();
 // Rate limiting for admin routes
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 1000 requests per windowMs (increased for development)
   message: 'Too many admin requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
@@ -41,6 +41,11 @@ export default function createAdminRoutes(database: DatabaseManager) {
   // User Management
   router.get('/users', validatePagination, async (req: express.Request, res: express.Response) => {
     await adminController.getAllUsers(req, res);
+  });
+
+  // Optimized endpoint that includes portfolio data to avoid N+1 queries
+  router.get('/users-with-portfolios', validatePagination, async (req: express.Request, res: express.Response) => {
+    await adminController.getAllUsersWithPortfolios(req, res);
   });
 
   router.get('/users/:userId', validateUserId, async (req: express.Request, res: express.Response) => {

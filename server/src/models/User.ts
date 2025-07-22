@@ -178,6 +178,32 @@ export class UserModel {
     return stmt.all(limit, offset) as User[];
   }
 
+  getAllUsersWithPortfolios(limit: number = 50, offset: number = 0): (User & {
+    total_balance?: number;
+    portfolio_value?: number;
+    total_trades?: number;
+    win_rate?: number;
+  })[] {
+    const stmt = this.db.prepare(`
+      SELECT 
+        u.*,
+        p.total_balance,
+        p.portfolio_value,
+        p.total_trades,
+        p.win_rate
+      FROM users u
+      LEFT JOIN portfolios p ON u.id = p.user_id
+      ORDER BY u.created_at DESC 
+      LIMIT ? OFFSET ?
+    `);
+    return stmt.all(limit, offset) as (User & {
+      total_balance?: number;
+      portfolio_value?: number;
+      total_trades?: number;
+      win_rate?: number;
+    })[];
+  }
+
   getUsersCount(): number {
     const stmt = this.db.prepare('SELECT COUNT(*) as count FROM users');
     const result = stmt.get() as { count: number };
