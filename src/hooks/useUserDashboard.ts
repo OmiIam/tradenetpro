@@ -62,6 +62,12 @@ export function useUserDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchDashboardData = async () => {
+    // Don't fetch user dashboard data if we're on an admin page
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       const response = await api.get('/api/user/dashboard')
@@ -93,6 +99,12 @@ export function useMarketData() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchMarketData = async () => {
+    // Don't fetch market data if we're on an admin page
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       const response = await api.get('/api/user/market-data')

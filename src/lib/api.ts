@@ -18,6 +18,9 @@ class ApiClient {
 
   private getAuthHeader(): Record<string, string> {
     const token = localStorage.getItem('accessToken');
+    if (!token) {
+      console.warn('No access token found in localStorage');
+    }
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -55,24 +58,32 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+    console.log(`API GET: ${this.baseURL}${endpoint}`);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...this.getAuthHeader(),
+    };
+    console.log('Request headers:', headers);
+    
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeader(),
-      },
+      headers,
     });
 
     return this.handleResponse<T>(response);
   }
 
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    console.log(`API POST: ${this.baseURL}${endpoint}`, data);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...this.getAuthHeader(),
+    };
+    console.log('Request headers:', headers);
+    
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeader(),
-      },
+      headers,
       body: data ? JSON.stringify(data) : undefined,
     });
 
@@ -80,12 +91,16 @@ class ApiClient {
   }
 
   async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    console.log(`API PUT: ${this.baseURL}${endpoint}`, data);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...this.getAuthHeader(),
+    };
+    console.log('Request headers:', headers);
+    
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeader(),
-      },
+      headers,
       body: data ? JSON.stringify(data) : undefined,
     });
 
