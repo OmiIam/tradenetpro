@@ -335,7 +335,7 @@ export default function SignUpPage() {
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
                   <span className="text-white font-bold text-xl">AI</span>
                 </div>
-                <span className="text-2xl font-bold text-white">TradePro</span>
+                <span className="text-2xl font-bold text-white">Tradenet</span>
               </motion.div>
               <h2 className="text-3xl font-bold text-white">
                 Create your account
