@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { adminApi, BackendAdminStats, BackendUser, transformBackendUser } from '@/lib/admin-api';
+import { adminApi, BackendAdminStats, BackendUser, BackendPortfolio, transformBackendUser } from '@/lib/admin-api';
 import { AdminUser, AdminStats } from '@/types/admin';
 
 export function useAdminStats() {
@@ -165,10 +165,14 @@ export function useAdminUsers() {
   const adjustBalance = useCallback(async (userId: string, amount: number, type: 'credit' | 'debit', description: string) => {
     try {
       console.log('Adjusting balance:', { userId, amount, type, description });
+      
       await adminApi.adjustBalance(parseInt(userId), amount, type, description);
+      console.log('API call completed, now refetching users...');
+      
       // Refetch users to get updated balance data
       await fetchUsers(pagination.page, pagination.limit);
-      console.log('Balance adjusted successfully:', { userId, amount, type });
+      
+      console.log('Balance adjusted and users refetched successfully:', { userId, amount, type });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to adjust balance';
       setError(errorMessage);

@@ -48,10 +48,15 @@ const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, 
     if (selectedUser && users.length > 0) {
       const updatedUser = users.find(user => user.id === selectedUser.id)
       if (updatedUser) {
+        console.log('Updating selectedUser with new balance:', {
+          oldBalance: selectedUser.totalBalance,
+          newBalance: updatedUser.totalBalance,
+          userId: selectedUser.id
+        })
         setSelectedUser(updatedUser)
       }
     }
-  }, [users, selectedUser])
+  }, [users])
 
   const recentAdjustments = [
     {
