@@ -63,31 +63,60 @@ export function useAdminUsers() {
       setLoading(true);
       setError(null);
       
-      // Use optimized endpoint that fetches users with portfolio data in a single call
-      const response = await adminApi.getUsersWithPortfolios(page, limit);
-      
-      // Transform the combined user+portfolio data
-      const transformedUsers = response.users.map((userWithPortfolio) => {
-        // Extract portfolio fields from the combined data
-        const portfolio = {
-          total_balance: userWithPortfolio.total_balance,
-          portfolio_value: userWithPortfolio.portfolio_value,
-          total_trades: userWithPortfolio.total_trades,
-          win_rate: userWithPortfolio.win_rate
-        };
+      try {
+        // Try the optimized endpoint first (if available)
+        const response = await adminApi.getUsersWithPortfolios(page, limit);
         
-        // Create user object without portfolio fields
-        const { total_balance, portfolio_value, total_trades, win_rate, ...user } = userWithPortfolio;
+        // Transform the combined user+portfolio data
+        const transformedUsers = response.users.map((userWithPortfolio) => {
+          // Extract portfolio fields from the combined data
+          const portfolio = {
+            total_balance: userWithPortfolio.total_balance,
+            portfolio_value: userWithPortfolio.portfolio_value,
+            total_trades: userWithPortfolio.total_trades,
+            win_rate: userWithPortfolio.win_rate
+          };
+          
+          // Create user object without portfolio fields
+          const { total_balance, portfolio_value, total_trades, win_rate, ...user } = userWithPortfolio;
+          
+          return transformBackendUser(user as BackendUser, portfolio as BackendPortfolio);
+        });
         
-        return transformBackendUser(user as BackendUser, portfolio as BackendPortfolio);
-      });
+        setUsers(transformedUsers);
+        setPagination({
+          page,
+          limit,
+          total: response.total
+        });
+        
+      } catch (optimizedError) {
+        // If optimized endpoint fails (404), fall back to original method
+        console.log('Optimized endpoint not available, falling back to original method');
+        
+        const response = await adminApi.getUsers(page, limit);
+        
+        // Get portfolio data for each user (original N+1 approach as fallback)
+        const usersWithPortfolios = await Promise.all(
+          response.users.map(async (user) => {
+            try {
+              const portfolio = await adminApi.getUserPortfolio(user.id);
+              return transformBackendUser(user, portfolio);
+            } catch {
+              // If portfolio fetch fails, return user without portfolio data
+              return transformBackendUser(user);
+            }
+          })
+        );
+        
+        setUsers(usersWithPortfolios);
+        setPagination({
+          page,
+          limit,
+          total: response.total
+        });
+      }
       
-      setUsers(transformedUsers);
-      setPagination({
-        page,
-        limit,
-        total: response.total
-      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch users';
       setError(errorMessage);
