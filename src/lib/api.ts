@@ -58,32 +58,24 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    console.log(`API GET: ${this.baseURL}${endpoint}`);
-    const headers = {
-      'Content-Type': 'application/json',
-      ...this.getAuthHeader(),
-    };
-    console.log('Request headers:', headers);
-    
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'GET',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
     });
 
     return this.handleResponse<T>(response);
   }
 
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-    console.log(`API POST: ${this.baseURL}${endpoint}`, data);
-    const headers = {
-      'Content-Type': 'application/json',
-      ...this.getAuthHeader(),
-    };
-    console.log('Request headers:', headers);
-    
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
       body: data ? JSON.stringify(data) : undefined,
     });
 
@@ -91,16 +83,12 @@ class ApiClient {
   }
 
   async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-    console.log(`API PUT: ${this.baseURL}${endpoint}`, data);
-    const headers = {
-      'Content-Type': 'application/json',
-      ...this.getAuthHeader(),
-    };
-    console.log('Request headers:', headers);
-    
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'PUT',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
       body: data ? JSON.stringify(data) : undefined,
     });
 

@@ -21,13 +21,16 @@ interface BalanceManagerProps {
   users: AdminUser[]
   loading?: boolean
   error?: string | null
-  onAdjustBalance: (adjustment: BalanceAdjustment) => void
+  onAdjustBalance: (adjustment: BalanceAdjustment) => Promise<void>
 }
 
 const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, onAdjustBalance }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
   const [showAdjustModal, setShowAdjustModal] = useState(false)
+  const [adjustmentLoading, setAdjustmentLoading] = useState(false)
+  const [adjustmentStatus, setAdjustmentStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [adjustmentError, setAdjustmentError] = useState<string>('')
   const [adjustmentForm, setAdjustmentForm] = useState({
     adjustmentType: 'add' as 'add' | 'subtract' | 'set',
     amount: '',
@@ -80,7 +83,7 @@ const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, 
     }).format(amount)
   }
 
-  const handleAdjustBalance = () => {
+  const handleAdjustBalance = async () => {
     if (!selectedUser || !adjustmentForm.amount || !adjustmentForm.reason) return
 
     const adjustment: BalanceAdjustment = {
@@ -91,10 +94,30 @@ const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, 
       notes: adjustmentForm.notes
     }
 
-    onAdjustBalance(adjustment)
-    setShowAdjustModal(false)
-    setAdjustmentForm({ adjustmentType: 'add', amount: '', reason: '', notes: '' })
-    setSelectedUser(null)
+    try {
+      setAdjustmentLoading(true)
+      setAdjustmentStatus('idle')
+      setAdjustmentError('')
+      
+      await onAdjustBalance(adjustment)
+      
+      setAdjustmentStatus('success')
+      
+      // Auto-close modal after success
+      setTimeout(() => {
+        setShowAdjustModal(false)
+        setAdjustmentForm({ adjustmentType: 'add', amount: '', reason: '', notes: '' })
+        setSelectedUser(null)
+        setAdjustmentStatus('idle')
+      }, 2000)
+      
+    } catch (error) {
+      console.error('Balance adjustment failed:', error)
+      setAdjustmentStatus('error')
+      setAdjustmentError(error instanceof Error ? error.message : 'Failed to adjust balance')
+    } finally {
+      setAdjustmentLoading(false)
+    }
   }
 
   const getAdjustmentIcon = (type: string) => {
@@ -375,6 +398,35 @@ const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, 
               </div>
             </div>
 
+            {/* Status Messages */}
+            {adjustmentStatus === 'success' && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 mt-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span className="text-green-400 font-medium">Balance adjusted successfully!</span>
+                </div>
+              </motion.div>
+            )}
+
+            {adjustmentStatus === 'error' && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mt-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <span className="text-red-400 font-medium">
+                    {adjustmentError || 'Failed to adjust balance'}
+                  </span>
+                </div>
+              </motion.div>
+            )}
+
             <div className="flex items-center justify-end space-x-3 mt-6">
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -383,8 +435,11 @@ const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, 
                   setShowAdjustModal(false)
                   setSelectedUser(null)
                   setAdjustmentForm({ adjustmentType: 'add', amount: '', reason: '', notes: '' })
+                  setAdjustmentStatus('idle')
+                  setAdjustmentError('')
                 }}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                disabled={adjustmentLoading}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-700 text-white rounded-lg transition-colors"
               >
                 Cancel
               </motion.button>
@@ -392,10 +447,15 @@ const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleAdjustBalance}
-                disabled={!adjustmentForm.amount || !adjustmentForm.reason}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                disabled={!adjustmentForm.amount || !adjustmentForm.reason || adjustmentLoading}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center space-x-2"
               >
-                Apply Adjustment
+                {adjustmentLoading && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
+                <span>
+                  {adjustmentLoading ? 'Processing...' : 'Apply Adjustment'}
+                </span>
               </motion.button>
             </div>
           </motion.div>

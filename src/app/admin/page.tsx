@@ -58,12 +58,28 @@ export default function AdminPage() {
   }
 
   const handleAdjustBalance = async (adjustment: BalanceAdjustment) => {
-    try {
-      const type = adjustment.adjustmentType === 'add' ? 'credit' : 'debit'
-      await adjustBalance(adjustment.userId, adjustment.amount, type, adjustment.reason)
-    } catch (error) {
-      console.error('Failed to adjust balance:', error)
+    // Map adjustment types to API types
+    let type: 'credit' | 'debit'
+    let amount = adjustment.amount
+    
+    if (adjustment.adjustmentType === 'add') {
+      type = 'credit'
+    } else if (adjustment.adjustmentType === 'subtract') {
+      type = 'debit'
+    } else if (adjustment.adjustmentType === 'set') {
+      // For 'set' type, we need to calculate the difference
+      const currentUser = users.find(u => u.id === adjustment.userId)
+      if (!currentUser) throw new Error('User not found')
+      
+      const difference = adjustment.amount - currentUser.totalBalance
+      type = difference >= 0 ? 'credit' : 'debit'
+      amount = Math.abs(difference)
+    } else {
+      throw new Error('Invalid adjustment type')
     }
+    
+    // Let errors propagate to the Balance Manager component for proper error handling
+    await adjustBalance(adjustment.userId, amount, type, adjustment.reason)
   }
 
   const handleUpdatePortfolio = (userId: string, positions: PortfolioPosition[]) => {
