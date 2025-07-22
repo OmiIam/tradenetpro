@@ -7,20 +7,23 @@ const CRYPTOS = [
   {
     key: 'btc',
     name: 'Bitcoin',
+    network: 'Bitcoin Network',
     icon: <Bitcoin className="w-6 h-6 text-yellow-400" />,
-    address: 'bc1qexamplebtcaddressplaceholder',
+    address: '32qcv43LkSuqPt5UH7D4DXEziNdrfgSY5f',
   },
   {
     key: 'usdt',
     name: 'USDT (Tether)',
+    network: 'TRC20 (Tron)',
     icon: <DollarSign className="w-6 h-6 text-green-400" />,
-    address: 'TUSDTexampleaddressplaceholder',
+    address: 'TAdUKGnTTJN3uccZmEx3MqiHWC5ECVE3nm',
   },
   {
     key: 'eth',
     name: 'Ethereum',
+    network: 'ERC20 (Ethereum)',
     icon: <ArrowUpRight className="w-6 h-6 text-blue-400" />,
-    address: '0xExampleEthereumAddress',
+    address: '0xA637C5520de9fc4F397643B671e01511d701Ea39',
   },
 ];
 
@@ -74,15 +77,16 @@ export default function DepositWithdraw() {
       </div>
 
       {/* Crypto selection */}
-      <div className="flex justify-center gap-4 mb-8">
+      <div className="flex justify-center gap-4 mb-8 flex-wrap">
         {CRYPTOS.map(crypto => (
           <button
             key={crypto.key}
-            className={`flex flex-col items-center px-4 py-3 rounded-xl border transition-all ${selectedCrypto === crypto.key ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/5'} hover:border-blue-400`}
+            className={`flex flex-col items-center px-4 py-3 rounded-xl border transition-all ${selectedCrypto === crypto.key ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/5'} hover:border-blue-400 min-w-[120px]`}
             onClick={() => setSelectedCrypto(crypto.key)}
           >
             {crypto.icon}
             <span className="mt-2 text-sm text-white font-medium">{crypto.name}</span>
+            <span className="text-xs text-gray-400">{crypto.network.split(' ')[0]}</span>
           </button>
         ))}
       </div>
@@ -90,13 +94,17 @@ export default function DepositWithdraw() {
       {tab === 'deposit' ? (
         <div className="text-center">
           <div className="text-gray-300 mb-2">Send {currentCrypto.name} to this address:</div>
-          <div className="bg-gray-900 rounded-lg px-4 py-3 text-white font-mono text-lg flex items-center justify-between">
-            <span className="truncate">{currentCrypto.address}</span>
-            <button onClick={handleCopy} className="ml-3 p-1 rounded hover:bg-gray-800 transition-colors">
+          <div className="text-sm text-blue-400 mb-3">Network: {currentCrypto.network}</div>
+          <div className="bg-gray-900 rounded-lg px-4 py-3 text-white font-mono text-sm sm:text-base flex items-center justify-between">
+            <span className="truncate mr-3">{currentCrypto.address}</span>
+            <button onClick={handleCopy} className="flex-shrink-0 p-1 rounded hover:bg-gray-800 transition-colors">
               {copied ? <CheckCircle className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5 text-gray-400" />}
             </button>
           </div>
-          <div className="text-xs text-gray-400 mt-2">Only send {currentCrypto.name} to this address. Sending any other asset may result in permanent loss.</div>
+          <div className="text-xs text-gray-400 mt-3">
+            <div className="mb-1">⚠️ Only send {currentCrypto.name} on the {currentCrypto.network} network to this address.</div>
+            <div>Sending any other asset or using a different network may result in permanent loss.</div>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleWithdraw} className="space-y-5">
