@@ -77,17 +77,28 @@ export class AdminController {
 
   // Optimized endpoint to get users with portfolio data in a single call
   async getAllUsersWithPortfolios(req: Request, res: Response): Promise<void> {
+    console.log(`[ADMIN] GET /api/admin/users-with-portfolios - Request received`, {
+      query: req.query,
+      timestamp: new Date().toISOString(),
+      userAgent: req.get('User-Agent'),
+      origin: req.get('Origin')
+    });
+
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
+      console.log(`[ADMIN] Fetching users with portfolios - limit: ${limit}, offset: ${offset}`);
+
       const usersWithPortfolios = this.userModel.getAllUsersWithPortfolios(limit, offset);
       const totalCount = this.userModel.getUsersCount();
+
+      console.log(`[ADMIN] Found ${usersWithPortfolios.length} users, total count: ${totalCount}`);
 
       // Remove password hashes from response
       const safeUsers = usersWithPortfolios.map(({ password_hash, ...user }) => user);
 
-      res.json({
+      const response = {
         users: safeUsers,
         pagination: {
           total: totalCount,
@@ -95,10 +106,21 @@ export class AdminController {
           offset,
           hasMore: offset + limit < totalCount
         }
-      });
+      };
+
+      console.log(`[ADMIN] Sending response with ${safeUsers.length} users`);
+      res.json(response);
     } catch (error) {
-      console.error('Get all users with portfolios error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('[ADMIN] Get all users with portfolios error:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+        query: req.query
+      });
+      res.status(500).json({ 
+        error: 'Internal server error',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 

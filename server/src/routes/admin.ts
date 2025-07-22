@@ -28,6 +28,16 @@ const adminLimiter = rateLimit({
 export default function createAdminRoutes(database: DatabaseManager) {
   const adminController = new AdminController(database);
 
+  // Debug logging middleware
+  router.use((req, res, next) => {
+    console.log(`[ADMIN ROUTER] ${req.method} ${req.path}`, {
+      query: req.query,
+      timestamp: new Date().toISOString(),
+      userAgent: req.get('User-Agent')
+    });
+    next();
+  });
+
   // Apply authentication and admin role check to all routes
   router.use(authenticateToken);
   router.use(requireAdmin);
@@ -38,6 +48,35 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.getDashboardStats(req, res);
   });
 
+  // Debug endpoint to list all available admin routes
+  router.get('/routes', (req: express.Request, res: express.Response) => {
+    const routes = [
+      'GET /api/admin/stats',
+      'GET /api/admin/routes',
+      'GET /api/admin/users',
+      'GET /api/admin/users-with-portfolios',
+      'GET /api/admin/users/:userId',
+      'PUT /api/admin/users/:userId',
+      'DELETE /api/admin/users/:userId',
+      'PUT /api/admin/users/:userId/status',
+      'POST /api/admin/users/:userId/balance',
+      'GET /api/admin/users/:userId/portfolio',
+      'PUT /api/admin/users/:userId/portfolio',
+      'POST /api/admin/users/:userId/portfolio/positions',
+      'GET /api/admin/users/:userId/transactions',
+      'POST /api/admin/users/:userId/transactions',
+      'GET /api/admin/transactions',
+      'GET /api/admin/portfolios'
+    ];
+    
+    res.json({
+      message: 'Available admin routes',
+      routes,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+
   // User Management
   router.get('/users', validatePagination, async (req: express.Request, res: express.Response) => {
     await adminController.getAllUsers(req, res);
@@ -45,6 +84,7 @@ export default function createAdminRoutes(database: DatabaseManager) {
 
   // Optimized endpoint that includes portfolio data to avoid N+1 queries
   router.get('/users-with-portfolios', validatePagination, async (req: express.Request, res: express.Response) => {
+    console.log(`[ADMIN] Route handler for /users-with-portfolios called`);
     await adminController.getAllUsersWithPortfolios(req, res);
   });
 
@@ -99,5 +139,6 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.getAllPortfolios(req, res);
   });
 
+  console.log(`[ADMIN] Admin routes registered successfully, including /users-with-portfolios`);
   return router;
 }

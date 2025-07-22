@@ -51,19 +51,24 @@ if (process.env.CORS_ORIGIN) {
 
 app.use(cors({
   origin: (origin, callback) => {
+    console.log(`[CORS] Request from origin: ${origin || 'no-origin'}`);
+    
     // Allow requests with no origin (mobile apps, postman, etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
+      console.log(`[CORS] Origin ${origin} allowed`);
       return callback(null, true);
     }
     
     // In development, allow all origins
     if (process.env.NODE_ENV === 'development') {
+      console.log(`[CORS] Development mode - allowing all origins`);
       return callback(null, true);
     }
     
     // Block the request
+    console.log(`[CORS] Origin ${origin} blocked. Allowed origins:`, allowedOrigins);
     const msg = `The CORS policy for this site does not allow access from the specified origin: ${origin}`;
     return callback(new Error(msg), false);
   },
@@ -148,8 +153,12 @@ app.post('/emergency-register', express.json(), async (req, res) => {
 });
 
 // API routes
+// API routes with logging
+console.log('[SERVER] Registering API routes...');
 app.use('/api/auth', createAuthRoutes(database));
+console.log('[SERVER] Admin routes being registered...');
 app.use('/api/admin', createAdminRoutes(database));
+console.log('[SERVER] Admin routes registered at /api/admin');
 app.use('/api/user', createUserRoutes(database));
 app.use('/api/verification', verificationRoutes);
 app.use('/api/debug', createDebugRoutes(database));
@@ -217,6 +226,29 @@ app.get('/api', (req, res) => {
           'POST /admin/cleanup-tokens - Cleanup expired tokens'
         ]
       }
+    }
+  });
+});
+
+// 404 handler for unmatched routes
+app.use('*', (req: express.Request, res: express.Response) => {
+  console.error(`[404] Route not found: ${req.method} ${req.originalUrl}`, {
+    timestamp: new Date().toISOString(),
+    userAgent: req.get('User-Agent'),
+    origin: req.get('Origin'),
+    referer: req.get('Referer'),
+    query: req.query,
+    body: req.body
+  });
+  
+  res.status(404).json({
+    error: 'Not found',
+    message: `Route ${req.method} ${req.originalUrl} not found`,
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    availableRoutes: {
+      admin: '/api/admin/routes',
+      api: '/api'
     }
   });
 });
