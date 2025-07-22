@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   DollarSign, 
@@ -42,6 +42,16 @@ const BalanceManager: React.FC<BalanceManagerProps> = ({ users, loading, error, 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Update selectedUser when users array changes (after balance adjustment)
+  useEffect(() => {
+    if (selectedUser && users.length > 0) {
+      const updatedUser = users.find(user => user.id === selectedUser.id)
+      if (updatedUser) {
+        setSelectedUser(updatedUser)
+      }
+    }
+  }, [users, selectedUser])
 
   const recentAdjustments = [
     {
