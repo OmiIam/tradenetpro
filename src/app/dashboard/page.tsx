@@ -211,6 +211,24 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Authentication Notice - Show if auth-related error */}
+          {dashboardError && (dashboardError.includes('Authentication') || dashboardError.includes('token') || dashboardError.includes('401') || dashboardError.includes('403')) && (
+            <div className="mt-8">
+              <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-6">
+                <h3 className="text-xl font-semibold text-yellow-400 mb-4">⚠️ Authentication Required</h3>
+                <p className="text-yellow-100 mb-4">
+                  You need to be logged in to view your dashboard. Please sign in to access your account balance and trading data.
+                </p>
+                <button 
+                  onClick={() => window.location.href = '/login'} 
+                  className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors"
+                >
+                  Sign In
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Debug Information - Only show if there's an error or in development */}
           {(dashboardError || process.env.NODE_ENV === 'development') && (
             <div className="mt-8">
@@ -221,6 +239,7 @@ export default function Dashboard() {
                   <p><span className="text-gray-400">Loading State:</span> <span className="text-white">{dashboardLoading ? 'Loading' : 'Loaded'}</span></p>
                   <p><span className="text-gray-400">Error:</span> <span className="text-red-400">{dashboardError || 'None'}</span></p>
                   <p><span className="text-gray-400">Data Received:</span> <span className="text-white">{dashboardData ? 'Yes' : 'No'}</span></p>
+                  <p><span className="text-gray-400">Access Token:</span> <span className="text-white">{typeof window !== 'undefined' && localStorage.getItem('accessToken') ? 'Present' : 'Missing'}</span></p>
                   {dashboardData && (
                     <p><span className="text-gray-400">Total Balance:</span> <span className="text-green-400">${dashboardData.portfolio.totalBalance}</span></p>
                   )}

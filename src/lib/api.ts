@@ -42,8 +42,18 @@ class ApiClient {
       // Add specific error messages for common status codes
       if (response.status === 401) {
         errorMessage = 'Authentication failed. Please login again.';
+        // Clear invalid token
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        }
       } else if (response.status === 403) {
-        errorMessage = 'Access denied. Admin privileges required.';
+        errorMessage = 'Authentication required. Please login to access your account.';
+        // Clear invalid token
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        }
       } else if (response.status === 404) {
         errorMessage = 'Resource not found.';
       } else if (response.status >= 500) {
