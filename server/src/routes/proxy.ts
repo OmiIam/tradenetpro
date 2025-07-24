@@ -11,6 +11,6 @@ router.all('/admin*', (req, res) => proxyController.proxyAdminRequest(req, res))
 router.all('/user*', (req, res) => proxyController.proxyUserRequest(req, res));
 
 // Auth routes - proxy authentication to Railway
-router.all('/auth*', (req, res) => proxyController.proxyRequest(req, res));
+router.all('/auth*', (req, res) => proxyController.proxyAuthRequest(req, res));
 
 export default router;

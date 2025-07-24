@@ -8,10 +8,11 @@ export class ProxyController {
     this.railwayApiUrl = process.env.RAILWAY_API_URL || 'https://internet-banking-production-1364.up.railway.app';
   }
 
-  async proxyRequest(req: Request, res: Response): Promise<void> {
+  async proxyAuthRequest(req: Request, res: Response): Promise<void> {
     try {
-      const { path } = req.params;
-      const url = `${this.railwayApiUrl}/${path}`;
+      // Remove /auth from the path since it's already included in the route
+      const authPath = req.path.replace(/^\/auth/, '');
+      const url = `${this.railwayApiUrl}/api/auth${authPath}`;
       
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -32,13 +33,19 @@ export class ProxyController {
         fetchOptions.body = JSON.stringify(req.body);
       }
 
-      const response = await fetch(url, fetchOptions);
+      // Add query parameters
+      const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+      const finalUrl = queryString ? `${url}?${queryString}` : url;
+
+      console.log(`[PROXY] ${req.method} ${finalUrl}`);
+
+      const response = await fetch(finalUrl, fetchOptions);
       const data = await response.json();
 
       res.status(response.status).json(data);
     } catch (error) {
-      console.error('Proxy request error:', error);
-      res.status(500).json({ error: 'Proxy request failed' });
+      console.error('Proxy auth request error:', error);
+      res.status(500).json({ error: 'Proxy auth request failed' });
     }
   }
 

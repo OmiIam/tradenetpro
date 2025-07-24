@@ -40,6 +40,8 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001', 
+  'http://172.20.10.9:3000',
+  'http://172.20.10.9:3002',
   'https://www.tradenet.im',
   'https://tradenet.im',
   'https://internet-banking-production-1364.up.railway.app'
