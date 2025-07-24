@@ -9,6 +9,7 @@ import createAdminRoutes from './routes/admin';
 import createUserRoutes from './routes/user';
 import verificationRoutes from './routes/verification';
 import createDebugRoutes from './routes/debug';
+import proxyRoutes from './routes/proxy';
 
 // Load environment variables
 dotenv.config();
@@ -19,8 +20,9 @@ const PORT = process.env.PORT || 3001;
 // Trust proxy for Railway deployment
 app.set('trust proxy', 1);
 
-// Initialize database
-const database = new DatabaseManager();
+// Initialize database only if not using remote API
+const useRemoteApi = process.env.USE_REMOTE_API === 'true';
+const database = useRemoteApi ? null : new DatabaseManager();
 
 // Security middleware
 app.use(helmet({
@@ -100,6 +102,13 @@ app.get('/health', (req, res) => {
 
 // Emergency registration endpoint - bypass all middleware
 app.post('/emergency-register', express.json(), async (req, res) => {
+  if (useRemoteApi) {
+    return res.status(503).json({ 
+      error: 'Service not available in proxy mode',
+      message: 'Please use the main Railway API for registration'
+    });
+  }
+
   try {
     console.log('EMERGENCY REGISTER CALLED');
     const { email, password, first_name, last_name } = req.body;
@@ -108,7 +117,7 @@ app.post('/emergency-register', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    const db = database.getDatabase();
+    const db = database!.getDatabase();
     const bcrypt = (await import('bcryptjs')).default;
     
     // Check existing user
@@ -153,22 +162,41 @@ app.post('/emergency-register', express.json(), async (req, res) => {
 });
 
 // API routes
-// API routes with logging
 console.log('[SERVER] Registering API routes...');
-app.use('/api/auth', createAuthRoutes(database));
-console.log('[SERVER] Admin routes being registered...');
-app.use('/api/admin', createAdminRoutes(database));
-console.log('[SERVER] Admin routes registered at /api/admin');
-app.use('/api/user', createUserRoutes(database));
-app.use('/api/verification', verificationRoutes);
-app.use('/api/debug', createDebugRoutes(database));
+
+if (useRemoteApi) {
+  console.log('[SERVER] Using remote Railway API proxy...');
+  app.use('/api', proxyRoutes);
+  console.log('[SERVER] Proxy routes registered for Railway API');
+} else {
+  console.log('[SERVER] Using local database routes...');
+  app.use('/api/auth', createAuthRoutes(database!));
+  console.log('[SERVER] Admin routes being registered...');
+  app.use('/api/admin', createAdminRoutes(database!));
+  console.log('[SERVER] Admin routes registered at /api/admin');
+  app.use('/api/user', createUserRoutes(database!));
+  app.use('/api/verification', verificationRoutes);
+  app.use('/api/debug', createDebugRoutes(database!));
+}
 
 // API documentation endpoint
 app.get('/api', (req, res) => {
+  if (useRemoteApi) {
+    return res.json({
+      name: 'Trade.im API Proxy',
+      version: '1.0.0',
+      description: 'Proxy server for Railway-hosted trading platform API',
+      mode: 'proxy',
+      remote_api: process.env.RAILWAY_API_URL,
+      message: 'All requests are proxied to the remote Railway API'
+    });
+  }
+
   res.json({
     name: 'Trade.im API',
     version: '1.0.0',
     description: 'Trading platform API with admin functionality',
+    mode: 'local',
     endpoints: {
       auth: {
         base: '/api/auth',
@@ -297,13 +325,13 @@ app.use((req, res) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
-  database.close();
+  if (database) database.close();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully...');
-  database.close();
+  if (database) database.close();
   process.exit(0);
 });
 
@@ -312,7 +340,14 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}/api`);
   console.log(`🔐 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🗄️  Database: ${process.env.DB_PATH || './database/trading_platform.db'}`);
+  
+  if (useRemoteApi) {
+    console.log(`🔗 Mode: PROXY to Railway API`);
+    console.log(`🛰️  Remote API: ${process.env.RAILWAY_API_URL}`);
+  } else {
+    console.log(`🗄️  Database: ${process.env.DB_PATH || './database/trading_platform.db'}`);
+  }
+  
   console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
 });
 
