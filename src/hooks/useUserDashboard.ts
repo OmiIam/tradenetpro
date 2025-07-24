@@ -83,6 +83,11 @@ export function useUserDashboard() {
 
   useEffect(() => {
     fetchDashboardData()
+    
+    // Refresh dashboard data every 10 seconds to catch balance updates
+    const interval = setInterval(fetchDashboardData, 10000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   return {

@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(railway up:*)",
+      "Bash(railway run:*)",
+      "Bash(railway variables:*)",
+      "Bash(railway volume:*)"
     ],
     "deny": []
   }
