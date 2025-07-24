@@ -15,6 +15,17 @@ export default function Dashboard() {
   const { dashboardData, loading: dashboardLoading, error: dashboardError } = useUserDashboard()
   const { marketData, loading: marketLoading, error: marketError } = useMarketData()
 
+  // Debug logging for troubleshooting
+  React.useEffect(() => {
+    console.log('Dashboard Debug Info:', {
+      dashboardData,
+      loading: dashboardLoading,
+      error: dashboardError,
+      apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+      timestamp: new Date().toISOString()
+    })
+  }, [dashboardData, dashboardLoading, dashboardError])
+
   // Mock chart data for AAPL (would be replaced with real chart data in production)
   const chartData = [
     { time: '09:00', price: 185.20 },
@@ -77,22 +88,24 @@ export default function Dashboard() {
       <div className="min-h-screen bg-trade-navy">
         <DashboardHeader />
         
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           {/* Hero Section */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Welcome to trade.im
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
+              Welcome to tradenet.im
             </h1>
-            <p className="text-gray-400">
+            <p className="text-sm sm:text-base text-gray-400 max-w-2xl">
               Advanced trading platform with AI-powered analytics and real-time market insights
             </p>
           </div>
 
-          {/* Stats Cards - Using Real Data */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          {/* Stats Cards - Mobile-First Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <StatsCard
               title="Account Value"
-              value={`$${(dashboardData?.portfolio.totalBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              value={dashboardData?.portfolio.totalBalance 
+                ? `$${dashboardData.portfolio.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                : dashboardLoading ? 'Loading...' : dashboardError ? 'Error' : '$0.00'}
               change={dashboardData?.portfolio.totalReturn || 0}
               changePercent={dashboardData?.portfolio.totalBalance 
                 ? ((dashboardData.portfolio.totalReturn / dashboardData.portfolio.totalBalance) * 100) 
@@ -101,7 +114,9 @@ export default function Dashboard() {
             />
             <StatsCard
               title="Portfolio Value"
-              value={`$${(dashboardData?.portfolio.totalBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              value={dashboardData?.portfolio.totalBalance 
+                ? `$${dashboardData.portfolio.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                : dashboardLoading ? 'Loading...' : dashboardError ? 'Error' : '$0.00'}
               change={0}
               changePercent={0}
               icon={<PieChart className="w-5 h-5" />}
@@ -131,8 +146,8 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* Main Content Grid - Mobile-First */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-6 lg:mb-8">
             {/* Chart Section */}
             <div className="lg:col-span-2">
               <MarketChart
@@ -149,8 +164,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Market Tables - Using Real Data */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Market Tables - Mobile-First Layout */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
             <MarketTable
               data={marketData?.stocks.map(stock => ({
                 ...stock,
@@ -191,6 +206,24 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Debug Information - Only show if there's an error or in development */}
+          {(dashboardError || process.env.NODE_ENV === 'development') && (
+            <div className="mt-8">
+              <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-6">
+                <h3 className="text-xl font-semibold text-red-400 mb-4">Debug Information</h3>
+                <div className="space-y-2 text-sm">
+                  <p><span className="text-gray-400">API Base URL:</span> <span className="text-white">{process.env.NEXT_PUBLIC_API_BASE_URL || 'Not set'}</span></p>
+                  <p><span className="text-gray-400">Loading State:</span> <span className="text-white">{dashboardLoading ? 'Loading' : 'Loaded'}</span></p>
+                  <p><span className="text-gray-400">Error:</span> <span className="text-red-400">{dashboardError || 'None'}</span></p>
+                  <p><span className="text-gray-400">Data Received:</span> <span className="text-white">{dashboardData ? 'Yes' : 'No'}</span></p>
+                  {dashboardData && (
+                    <p><span className="text-gray-400">Total Balance:</span> <span className="text-green-400">${dashboardData.portfolio.totalBalance}</span></p>
+                  )}
                 </div>
               </div>
             </div>
