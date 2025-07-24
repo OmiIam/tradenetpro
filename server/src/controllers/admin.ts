@@ -229,7 +229,7 @@ export class AdminController {
       const { amount, type, description } = req.body;
       const adminId = req.user!.userId;
 
-      // Adjust the balance
+      // Adjust the balance (now automatically syncs portfolio value)
       const updatedPortfolio = this.portfolioModel.adjustBalance(userId, amount, type);
 
       if (!updatedPortfolio) {

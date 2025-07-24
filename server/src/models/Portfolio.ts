@@ -114,13 +114,20 @@ export class PortfolioModel {
     // Ensure balance doesn't go negative
     newBalance = Math.max(0, newBalance);
 
+    // Calculate total portfolio value (cash + positions)
+    const positions = this.getPortfolioPositions(portfolio.id);
+    const totalPositionValue = positions.reduce((sum, pos) => {
+      return sum + (pos.quantity * pos.current_price);
+    }, 0);
+    const portfolioValue = newBalance + totalPositionValue;
+
     const stmt = this.db.prepare(`
       UPDATE portfolios 
-      SET total_balance = ?, updated_at = CURRENT_TIMESTAMP 
+      SET total_balance = ?, portfolio_value = ?, updated_at = CURRENT_TIMESTAMP 
       WHERE user_id = ?
     `);
 
-    stmt.run(newBalance, userId);
+    stmt.run(newBalance, portfolioValue, userId);
     return this.getPortfolioByUserId(userId);
   }
 
@@ -226,6 +233,27 @@ export class PortfolioModel {
       LIMIT ? OFFSET ?
     `);
     return stmt.all(limit, offset) as (Portfolio & { user_email: string; user_name: string })[];
+  }
+
+  syncPortfolioValue(userId: number): Portfolio | null {
+    const portfolio = this.getPortfolioByUserId(userId);
+    if (!portfolio) return null;
+
+    const positions = this.getPortfolioPositions(portfolio.id);
+    const totalPositionValue = positions.reduce((sum, pos) => {
+      return sum + (pos.quantity * pos.current_price);
+    }, 0);
+    
+    const actualPortfolioValue = portfolio.total_balance + totalPositionValue;
+
+    const stmt = this.db.prepare(`
+      UPDATE portfolios 
+      SET portfolio_value = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE user_id = ?
+    `);
+
+    stmt.run(actualPortfolioValue, userId);
+    return this.getPortfolioByUserId(userId);
   }
 }
 

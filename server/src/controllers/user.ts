@@ -46,17 +46,23 @@ export class UserController {
 
       const unrealizedPnL = totalPositionValue - totalCost;
       
+      // Calculate actual portfolio value (cash + positions)
+      const actualPortfolioValue = portfolio.total_balance + totalPositionValue;
+      
+      // Sync portfolio value in database to match actual calculation
+      this.portfolioModel.syncPortfolioValue(userId);
+      
       // Calculate today's P&L (simplified - would need historical data for accuracy)
       const todayPnL = unrealizedPnL * 0.1; // Assuming 10% of unrealized P&L happened today
 
       res.json({
         portfolio: {
           totalBalance: portfolio.total_balance,
-          portfolioValue: portfolio.portfolio_value,
+          portfolioValue: actualPortfolioValue,
           totalTrades: portfolio.total_trades,
           winRate: portfolio.win_rate,
           todayPnL: todayPnL,
-          totalReturn: portfolio.portfolio_value - portfolio.total_balance
+          totalReturn: actualPortfolioValue - portfolio.total_balance
         },
         positions,
         recentTransactions: recentTransactions.slice(0, 5)
@@ -196,7 +202,7 @@ export class UserController {
         return;
       }
 
-      // Update portfolio balance
+      // Update portfolio balance (automatically syncs portfolio_value)
       const updatedPortfolio = this.portfolioModel.adjustBalance(userId, amount, 'add');
 
       res.status(201).json({
@@ -240,7 +246,7 @@ export class UserController {
         return;
       }
 
-      // Update portfolio balance
+      // Update portfolio balance (automatically syncs portfolio_value)
       const updatedPortfolio = this.portfolioModel.adjustBalance(userId, amount, 'subtract');
 
       res.status(201).json({
