@@ -85,7 +85,9 @@ export class ProxyController {
 
   async proxyUserRequest(req: Request, res: Response): Promise<void> {
     try {
-      const url = `${this.railwayApiUrl}/api/user${req.path}`;
+      // Remove /user from the path since it's already included in the route
+      const userPath = req.path.replace(/^\/user/, '');
+      const url = `${this.railwayApiUrl}/api/user${userPath}`;
       
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
