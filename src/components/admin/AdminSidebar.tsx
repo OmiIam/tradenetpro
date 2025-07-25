@@ -19,7 +19,8 @@ import {
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Terminal
 } from 'lucide-react'
 
 interface AdminSidebarProps {
@@ -75,6 +76,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, onTabChange }) =
     { id: 'portfolios', label: 'Portfolio Manager', icon: PieChart },
     { id: 'transactions', label: 'Transactions', icon: Activity },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { id: 'logs', label: 'System Logs', icon: Terminal },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
 

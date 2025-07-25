@@ -1,207 +1,415 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
-import AdminSidebar from '@/components/admin/AdminSidebar'
-import AdminStatsComponent from '@/components/admin/AdminStats'
-import UserManagement from '@/components/admin/UserManagement'
-import BalanceManager from '@/components/admin/BalanceManager'
-import PortfolioManager from '@/components/admin/PortfolioManager'
-import ProtectedRoute from '@/components/ProtectedRoute'
-import MobileOptimizedCard from '@/components/admin/MobileOptimizedCard'
-import MobileBreadcrumb from '@/components/admin/MobileBreadcrumb'
-import { AdminUser, AdminStats, BalanceAdjustment, PortfolioPosition } from '@/types/admin'
-import { useAdminStats, useAdminUsers } from '@/hooks/useAdminData'
+import React, { useEffect } from 'react';
+import { Users, CreditCard, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ArrowUpRight, ArrowDownRight, Activity, DollarSign } from 'lucide-react';
+import { motion } from 'framer-motion';
+import AdminLayout from '@/components/admin/AdminLayout';
+import { AdminProvider, useAdmin } from '@/contexts/AdminContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import StatsCard from '@/components/StatsCard';
+import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { SkeletonCard } from '@/components/ui/SkeletonLoader';
 
-export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState('overview')
-  
-  // Use real admin data hooks
-  const { stats, loading: statsLoading, error: statsError } = useAdminStats()
-  const { 
-    users, 
-    loading: usersLoading, 
-    error: usersError,
-    updateUser,
-    deleteUser,
-    toggleUserStatus,
-    adjustBalance
-  } = useAdminUsers()
+function AdminOverviewContent() {
+  const { state, fetchStats, fetchUsers, fetchTransactions, fetchKycDocuments } = useAdmin();
+  const { stats, loading, errors } = state;
 
-  const handleEditUser = async (user: AdminUser) => {
-    try {
-      await updateUser(user.id, {
-        first_name: user.firstName,
-        last_name: user.lastName,
-        email: user.email,
-        role: user.role,
-        status: user.status
-      })
-    } catch (error) {
-      console.error('Failed to edit user:', error)
-    }
+  useEffect(() => {
+    // Fetch initial data
+    fetchStats();
+    fetchUsers(1);
+    fetchTransactions(1);
+    fetchKycDocuments(1);
+  }, [fetchStats, fetchUsers, fetchTransactions, fetchKycDocuments]);
+
+  if (loading.stats) {
+    return (
+      <div className="space-y-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-3"
+        >
+          <h1 className="text-4xl font-bold text-white tracking-tight">Admin Overview</h1>
+          <p className="text-lg text-slate-400">Monitor platform performance and user activity</p>
+        </motion.div>
+        
+        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+            >
+              <SkeletonCard />
+            </motion.div>
+          ))}
+        </ResponsiveGrid>
+      </div>
+    );
   }
 
-  const handleDeleteUser = async (userId: string) => {
-    try {
-      await deleteUser(userId)
-    } catch (error) {
-      console.error('Failed to delete user:', error)
-    }
+  if (errors.stats) {
+    return (
+      <div className="space-y-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-3"
+        >
+          <h1 className="text-4xl font-bold text-white tracking-tight">Admin Overview</h1>
+          <p className="text-lg text-slate-400">Monitor platform performance and user activity</p>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-red-500/20 bg-red-500/5">
+            <CardContent className="flex items-center space-x-4 p-8">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center border border-red-500/20">
+                  <AlertTriangle className="w-6 h-6 text-red-400" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold text-red-400 mb-2">Error Loading Dashboard</h3>
+                <p className="text-slate-300 leading-relaxed">{errors.stats}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
   }
 
-  const handleToggleStatus = async (userId: string, status: 'active' | 'suspended') => {
-    try {
-      await toggleUserStatus(userId, status)
-    } catch (error) {
-      console.error('Failed to toggle user status:', error)
-    }
-  }
+  // Calculate growth metrics for enhanced display
+  const calculateGrowth = (current: number, previous: number) => {
+    if (previous === 0) return { value: 0, isPositive: true };
+    const growth = ((current - previous) / previous) * 100;
+    return { value: Math.abs(growth), isPositive: growth >= 0 };
+  };
 
-  const handleAdjustBalance = async (adjustment: BalanceAdjustment) => {
-    // Map adjustment types to API types
-    let type: 'credit' | 'debit'
-    let amount = adjustment.amount
-    
-    if (adjustment.adjustmentType === 'add') {
-      type = 'credit'
-    } else if (adjustment.adjustmentType === 'subtract') {
-      type = 'debit'
-    } else if (adjustment.adjustmentType === 'set') {
-      // For 'set' type, we need to calculate the difference
-      const currentUser = users.find(u => u.id === adjustment.userId)
-      if (!currentUser) throw new Error('User not found')
-      
-      const difference = adjustment.amount - currentUser.totalBalance
-      type = difference >= 0 ? 'credit' : 'debit'
-      amount = Math.abs(difference)
-    } else {
-      throw new Error('Invalid adjustment type')
-    }
-    
-    // Let errors propagate to the Balance Manager component for proper error handling
-    await adjustBalance(adjustment.userId, amount, type, adjustment.reason)
-  }
-
-  const handleUpdatePortfolio = (userId: string, positions: PortfolioPosition[]) => {
-    console.log('Update portfolio:', userId, positions)
-    // Implementation for updating portfolio
-  }
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Admin Overview</h1>
-              <p className="text-gray-400">Monitor platform performance and user activity</p>
-            </div>
-            <AdminStatsComponent stats={stats} loading={statsLoading} error={statsError} />
-            
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              <MobileOptimizedCard onClick={() => setActiveTab('users')}>
-                <h3 className="text-lg font-semibold text-white mb-2">User Management</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Manage user accounts, status, and permissions
-                </p>
-                <div className="text-blue-400 font-medium">Manage Users →</div>
-              </MobileOptimizedCard>
-              
-              <MobileOptimizedCard onClick={() => setActiveTab('balances')}>
-                <h3 className="text-lg font-semibold text-white mb-2">Balance Manager</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Adjust user balances and track transactions
-                </p>
-                <div className="text-green-400 font-medium">Manage Balances →</div>
-              </MobileOptimizedCard>
-              
-              <MobileOptimizedCard onClick={() => setActiveTab('portfolios')}>
-                <h3 className="text-lg font-semibold text-white mb-2">Portfolio Manager</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Manage user portfolios and positions
-                </p>
-                <div className="text-purple-400 font-medium">Manage Portfolios →</div>
-              </MobileOptimizedCard>
-            </div>
-          </div>
-        )
-      case 'users':
-        return (
-          <UserManagement
-            users={users}
-            loading={usersLoading}
-            error={usersError}
-            onEditUser={handleEditUser}
-            onDeleteUser={handleDeleteUser}
-            onToggleStatus={handleToggleStatus}
-          />
-        )
-      case 'balances':
-        return (
-          <BalanceManager
-            users={users}
-            loading={usersLoading}
-            error={usersError}
-            onAdjustBalance={handleAdjustBalance}
-          />
-        )
-      case 'portfolios':
-        return (
-          <PortfolioManager
-            users={users}
-            onUpdatePortfolio={handleUpdatePortfolio}
-          />
-        )
-      case 'transactions':
-        return (
-          <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">Transaction Management</h2>
-            <p className="text-gray-400">Transaction management features coming soon...</p>
-          </div>
-        )
-      case 'analytics':
-        return (
-          <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">Analytics Dashboard</h2>
-            <p className="text-gray-400">Advanced analytics features coming soon...</p>
-          </div>
-        )
-      case 'settings':
-        return (
-          <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">Admin Settings</h2>
-            <p className="text-gray-400">Platform settings and configuration options coming soon...</p>
-          </div>
-        )
-      default:
-        return null
-    }
-  }
+  const userGrowth = calculateGrowth(stats.activeUsers, Math.max(1, stats.totalUsers - stats.activeUsers));
+  const transactionGrowth = calculateGrowth(stats.totalTransactions, Math.max(1, stats.totalTransactions - 100));
 
   return (
-    <ProtectedRoute requireAdmin={true}>
-      <div className="min-h-screen bg-trade-navy flex relative">
-        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+    <div className="space-y-10">
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-3"
+      >
+        <h1 className="text-4xl font-bold text-white tracking-tight">Admin Overview</h1>
+        <p className="text-lg text-slate-400">Monitor platform performance and user activity</p>
+      </motion.div>
+
+      {/* Enhanced Key Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="6">
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-blue-500/5 to-blue-600/5 hover:border-blue-500/30 transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
+                    <Users className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <ArrowUpRight className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">+{userGrowth.value.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Total Users</h3>
+                  <p className="text-3xl font-bold text-white">{stats.totalUsers.toLocaleString()}</p>
+                  <p className="text-sm text-slate-400">Active: {stats.activeUsers.toLocaleString()}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 md:ml-0">
-          {/* Mobile Header Space */}
-          <div className="h-16 md:hidden"></div>
-          
-          {/* Content */}
-          <div className="flex-1 overflow-auto">
-            <div className="p-4 md:p-6 max-w-full">
-              <MobileBreadcrumb 
-                currentTab={activeTab} 
-                onBack={() => setActiveTab('overview')}
-                showBackButton={activeTab !== 'overview'}
-              />
-              {renderContent()}
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-green-500/5 to-green-600/5 hover:border-green-500/30 transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center border border-green-500/20">
+                    <Activity className="w-6 h-6 text-green-400" />
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <ArrowUpRight className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">
+                      {stats.totalUsers > 0 ? ((stats.activeUsers / stats.totalUsers) * 100).toFixed(1) : 0}%
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Active Users</h3>
+                  <p className="text-3xl font-bold text-white">{stats.activeUsers.toLocaleString()}</p>
+                  <p className="text-sm text-slate-400">Engagement rate</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-purple-500/5 to-purple-600/5 hover:border-purple-500/30 transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center border border-purple-500/20">
+                    <CreditCard className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <ArrowUpRight className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">+{transactionGrowth.value.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Transactions</h3>
+                  <p className="text-3xl font-bold text-white">{stats.totalTransactions.toLocaleString()}</p>
+                  <p className="text-sm text-slate-400">Total processed</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-amber-500/5 to-amber-600/5 hover:border-amber-500/30 transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20">
+                    <DollarSign className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <ArrowUpRight className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">+12.5%</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Volume</h3>
+                  <p className="text-3xl font-bold text-white">
+                    {typeof stats.transactionVolume === 'number' 
+                      ? `$${stats.transactionVolume.toLocaleString()}` 
+                      : stats.transactionVolume}
+                  </p>
+                  <p className="text-sm text-slate-400">Transaction volume</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </ResponsiveGrid>
+      </motion.div>
+
+      {/* System Status & Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <ResponsiveGrid cols={{ base: 1, lg: 2 }} gap="8">
+          {/* Enhanced System Health */}
+          <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
+            <Card className="border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center space-x-3 text-xl">
+                  <div className={`w-4 h-4 rounded-full ${
+                    stats.systemHealth === 'healthy' ? 'bg-green-500 shadow-lg shadow-green-500/30' :
+                    stats.systemHealth === 'warning' ? 'bg-yellow-500 shadow-lg shadow-yellow-500/30' : 'bg-red-500 shadow-lg shadow-red-500/30'
+                  } animate-pulse`} />
+                  <span className="text-white">System Health</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <span className="text-sm text-slate-400 font-medium">Status</span>
+                    <p className={`text-lg font-semibold capitalize ${
+                      stats.systemHealth === 'healthy' ? 'text-green-400' :
+                      stats.systemHealth === 'warning' ? 'text-yellow-400' : 'text-red-400'
+                    }`}>
+                      {stats.systemHealth}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <span className="text-sm text-slate-400 font-medium">Pending KYC</span>
+                    <p className="text-lg font-semibold text-white">{stats.pendingKyc}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <span className="text-sm text-slate-400 font-medium">Server Load</span>
+                    <p className="text-lg font-semibold text-green-400">Normal</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <span className="text-sm text-slate-400 font-medium">Uptime</span>
+                    <p className="text-lg font-semibold text-white">99.9%</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Enhanced Quick Actions */}
+          <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
+            <Card className="border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl text-white">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => window.location.href = '/admin/users'}
+                    className="group relative p-5 bg-gradient-to-br from-blue-600/80 to-blue-700/80 hover:from-blue-500/90 hover:to-blue-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+                    <Users className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
+                    <div className="relative z-10">
+                      <div className="text-white font-semibold mb-1">Manage Users</div>
+                      <div className="text-blue-100 text-sm opacity-90">{stats.totalUsers.toLocaleString()} total</div>
+                    </div>
+                  </motion.button>
+                  
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => window.location.href = '/admin/transactions'}
+                    className="group relative p-5 bg-gradient-to-br from-green-600/80 to-green-700/80 hover:from-green-500/90 hover:to-green-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+                    <CreditCard className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
+                    <div className="relative z-10">
+                      <div className="text-white font-semibold mb-1">Transactions</div>
+                      <div className="text-green-100 text-sm opacity-90">{stats.totalTransactions.toLocaleString()} total</div>
+                    </div>
+                  </motion.button>
+                  
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => window.location.href = '/admin/kyc'}
+                    className="group relative p-5 bg-gradient-to-br from-amber-600/80 to-amber-700/80 hover:from-amber-500/90 hover:to-amber-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+                    <ShieldCheck className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
+                    <div className="relative z-10">
+                      <div className="text-white font-semibold mb-1">KYC Review</div>
+                      <div className="text-amber-100 text-sm opacity-90">{stats.pendingKyc} pending</div>
+                    </div>
+                  </motion.button>
+                  
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => window.location.href = '/admin/analytics'}
+                    className="group relative p-5 bg-gradient-to-br from-purple-600/80 to-purple-700/80 hover:from-purple-500/90 hover:to-purple-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+                    <TrendingUp className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
+                    <div className="relative z-10">
+                      <div className="text-white font-semibold mb-1">Analytics</div>
+                      <div className="text-purple-100 text-sm opacity-90">View reports</div>
+                    </div>
+                  </motion.button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </ResponsiveGrid>
+      </motion.div>
+
+      {/* Recent Activity */}
+      <ResponsiveGrid cols={{ base: 1, lg: 2 }} gap="lg">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent User Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {state.users.slice(0, 5).map((user) => (
+                <div key={user.id} className="flex items-center justify-between py-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-semibold">
+                        {user.first_name[0]}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{user.first_name} {user.last_name}</p>
+                      <p className="text-gray-400 text-sm">{user.email}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    user.status === 'active' ? 'bg-green-900/20 text-green-400' :
+                    user.status === 'inactive' ? 'bg-gray-900/20 text-gray-400' :
+                    'bg-red-900/20 text-red-400'
+                  }`}>
+                    {user.status}
+                  </span>
+                </div>
+              ))}
+              
+              {state.users.length === 0 && (
+                <p className="text-gray-400 text-center py-4">No users to display</p>
+              )}
             </div>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {state.transactions.slice(0, 5).map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between py-2">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      transaction.status === 'completed' ? 'bg-green-500' :
+                      transaction.status === 'pending' ? 'bg-yellow-500' :
+                      transaction.status === 'failed' ? 'bg-red-500' : 'bg-gray-500'
+                    }`} />
+                    <div>
+                      <p className="text-white font-medium capitalize">{transaction.type}</p>
+                      <p className="text-gray-400 text-sm">{transaction.currency}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-medium">${transaction.amount.toFixed(2)}</p>
+                    <p className="text-gray-400 text-sm capitalize">{transaction.status}</p>
+                  </div>
+                </div>
+              ))}
+              
+              {state.transactions.length === 0 && (
+                <p className="text-gray-400 text-center py-4">No transactions to display</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </ResponsiveGrid>
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <AdminProvider>
+        <AdminLayout>
+          <AdminOverviewContent />
+        </AdminLayout>
+      </AdminProvider>
     </ProtectedRoute>
-  )
+  );
 }
