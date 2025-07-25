@@ -188,21 +188,9 @@ export function AnimatedCounter({
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
     >
-      <motion.span
-        initial={{ textContent: from }}
-        whileInView={{ textContent: to }}
-        viewport={{ once: true }}
-        transition={{
-          duration,
-          ease: 'easeOut'
-        }}
-        onUpdate={(latest) => {
-          // This would need a ref to update the DOM directly
-          // For now, we'll use a simpler approach
-        }}
-      >
+      <span>
         {prefix}{to}{suffix}
-      </motion.span>
+      </span>
     </motion.span>
   );
 }

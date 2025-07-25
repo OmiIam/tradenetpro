@@ -101,7 +101,7 @@ export default function AnalyticsDashboard() {
       try {
         const response = await api.get(`/api/admin/analytics?timeRange=${timeRange}`);
         if (response.data) {
-          setAnalyticsData(response.data);
+          setAnalyticsData(response.data as AnalyticsData);
         } else {
           throw new Error('No data received');
         }

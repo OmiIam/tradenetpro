@@ -5,11 +5,11 @@ import { Search, Filter, Plus, Edit, Trash2, Ban, CheckCircle, MoreVertical } fr
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin, AdminUser } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { MobileInput, MobileSelect, MobileForm } from '@/components/ui/MobileForm';
 import MobileTable from '@/components/ui/MobileTable';
-import { Modal } from '@/components/ui/Modal';
+import Modal from '@/components/ui/Modal';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import { getRoleDisplayName, getRoleColor, Role } from '@/lib/rbac';
 import { useMobile } from '@/components/layout/ResponsiveContainer';
@@ -216,7 +216,7 @@ function UsersPageContent() {
       key: 'name',
       label: 'User',
       primary: true,
-      render: (_, user: AdminUser) => (
+      render: (_: any, user: AdminUser) => (
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
             <span className="text-white font-semibold text-sm">
@@ -370,7 +370,6 @@ function UsersPageContent() {
           <MobileTable
             data={state.users}
             columns={userColumns}
-            loading={state.loading.users}
             emptyMessage="No users found"
             onRowClick={(user) => {
               if (canWrite) {

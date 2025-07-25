@@ -120,8 +120,8 @@ export default function LogsViewer() {
       try {
         const response = await api.get(`/api/admin/logs?page=${page}&limit=${itemsPerPage}`);
         if (response.data) {
-          setLogs(response.data.logs || []);
-          setTotalPages(Math.ceil((response.data.total || 0) / itemsPerPage));
+          setLogs((response.data as any).logs || []);
+          setTotalPages(Math.ceil(((response.data as any).total || 0) / itemsPerPage));
         } else {
           throw new Error('No data received');
         }

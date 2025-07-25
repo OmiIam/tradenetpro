@@ -100,8 +100,8 @@ export default function TransactionManagement() {
       const response = await api.get(`/api/admin/transactions?page=${page}&limit=${itemsPerPage}`);
       
       if (response.data) {
-        setTransactions(response.data.transactions || []);
-        setTotalPages(Math.ceil((response.data.total || 0) / itemsPerPage));
+        setTransactions((response.data as any).transactions || []);
+        setTotalPages(Math.ceil(((response.data as any).total || 0) / itemsPerPage));
       }
     } catch (err: any) {
       console.error('Error fetching transactions:', err);
@@ -179,8 +179,8 @@ export default function TransactionManagement() {
         bValue = bValue.toLowerCase();
       }
 
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      if (aValue != null && bValue != null && aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue != null && bValue != null && aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
 

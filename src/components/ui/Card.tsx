@@ -4,11 +4,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardProps {
   variant?: 'default' | 'glass' | 'elevated' | 'bordered';
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   hover?: boolean;
   clickable?: boolean;
+  className?: string;
+  onClick?: () => void;
   children: React.ReactNode;
 }
 
@@ -33,8 +35,8 @@ export default function Card({
   hover = false,
   clickable = false,
   className,
-  children,
-  ...props
+  onClick,
+  children
 }: CardProps) {
   const MotionComponent = clickable ? motion.div : motion.div;
 
@@ -59,7 +61,7 @@ export default function Card({
         // Custom className
         className
       )}
-      {...props}
+      onClick={onClick}
     >
       {children}
     </MotionComponent>

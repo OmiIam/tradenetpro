@@ -6,9 +6,9 @@ import { motion } from 'framer-motion';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import StatsCard from '@/components/StatsCard';
+import StatCard from '@/components/admin/StatCard';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { SkeletonCard } from '@/components/ui/SkeletonLoader';
 
 function AdminOverviewContent() {
@@ -35,7 +35,7 @@ function AdminOverviewContent() {
           <p className="text-lg text-slate-400">Monitor platform performance and user activity</p>
         </motion.div>
         
-        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="6">
+        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="lg">
           {Array.from({ length: 4 }).map((_, i) => (
             <motion.div
               key={i}
@@ -43,7 +43,12 @@ function AdminOverviewContent() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
-              <SkeletonCard />
+              <StatCard
+                title="Loading..."
+                value="---"
+                icon={Activity}
+                loading={true}
+              />
             </motion.div>
           ))}
         </ResponsiveGrid>
@@ -114,96 +119,60 @@ function AdminOverviewContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="6">
-          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-blue-500/5 to-blue-600/5 hover:border-blue-500/30 transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
-                    <Users className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <ArrowUpRight className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">+{userGrowth.value.toFixed(1)}%</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Total Users</h3>
-                  <p className="text-3xl font-bold text-white">{stats.totalUsers.toLocaleString()}</p>
-                  <p className="text-sm text-slate-400">Active: {stats.activeUsers.toLocaleString()}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        
-          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-green-500/5 to-green-600/5 hover:border-green-500/30 transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center border border-green-500/20">
-                    <Activity className="w-6 h-6 text-green-400" />
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <ArrowUpRight className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">
-                      {stats.totalUsers > 0 ? ((stats.activeUsers / stats.totalUsers) * 100).toFixed(1) : 0}%
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Active Users</h3>
-                  <p className="text-3xl font-bold text-white">{stats.activeUsers.toLocaleString()}</p>
-                  <p className="text-sm text-slate-400">Engagement rate</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        
-          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-purple-500/5 to-purple-600/5 hover:border-purple-500/30 transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center border border-purple-500/20">
-                    <CreditCard className="w-6 h-6 text-purple-400" />
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <ArrowUpRight className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">+{transactionGrowth.value.toFixed(1)}%</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Transactions</h3>
-                  <p className="text-3xl font-bold text-white">{stats.totalTransactions.toLocaleString()}</p>
-                  <p className="text-sm text-slate-400">Total processed</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        
-          <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="relative overflow-hidden border-slate-700/50 bg-gradient-to-br from-amber-500/5 to-amber-600/5 hover:border-amber-500/30 transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20">
-                    <DollarSign className="w-6 h-6 text-amber-400" />
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <ArrowUpRight className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">+12.5%</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Volume</h3>
-                  <p className="text-3xl font-bold text-white">
-                    {typeof stats.transactionVolume === 'number' 
-                      ? `$${stats.transactionVolume.toLocaleString()}` 
-                      : stats.transactionVolume}
-                  </p>
-                  <p className="text-sm text-slate-400">Transaction volume</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="lg">
+          <StatCard
+            title="Total Users"
+            value={stats.totalUsers}
+            delta={{
+              value: userGrowth.value,
+              isPositive: userGrowth.isPositive,
+              label: `Active: ${stats.activeUsers.toLocaleString()}`
+            }}
+            icon={Users}
+            color="blue"
+            subtitle="Registered users"
+          />
+
+          <StatCard
+            title="Active Users"
+            value={stats.activeUsers}
+            delta={{
+              value: stats.totalUsers > 0 ? (stats.activeUsers / stats.totalUsers) * 100 : 0,
+              isPositive: true,
+              label: "Engagement rate"
+            }}
+            icon={Activity}
+            color="green"
+            subtitle="Currently active"
+          />
+
+          <StatCard
+            title="Transactions"
+            value={stats.totalTransactions}
+            delta={{
+              value: transactionGrowth.value,
+              isPositive: transactionGrowth.isPositive,
+              label: "Total processed"
+            }}
+            icon={CreditCard}
+            color="purple"
+            subtitle="All transactions"
+          />
+
+          <StatCard
+            title="Volume"
+            value={typeof stats.transactionVolume === 'number' 
+              ? `$${stats.transactionVolume.toLocaleString()}` 
+              : stats.transactionVolume}
+            delta={{
+              value: 12.5,
+              isPositive: true,
+              label: "Transaction volume"
+            }}
+            icon={DollarSign}
+            color="amber"
+            subtitle="Total value"
+          />
         </ResponsiveGrid>
       </motion.div>
 
@@ -213,7 +182,7 @@ function AdminOverviewContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <ResponsiveGrid cols={{ base: 1, lg: 2 }} gap="8">
+        <ResponsiveGrid cols={{ base: 1, lg: 2 }} gap="xl">
           {/* Enhanced System Health */}
           <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
             <Card className="border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">

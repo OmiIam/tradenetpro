@@ -391,20 +391,41 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_ERROR', module: 'users', error: null });
     
     try {
+      const limit = state.pagination.users.limit;
+      const offset = (page - 1) * limit;
+      
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: state.pagination.users.limit.toString(),
+        limit: limit.toString(),
+        offset: offset.toString(),
         ...filters
       });
       
-      const response = await apiCall(`/admin/users?${params}`);
+      console.log('[AdminContext] Fetching users with params:', params.toString());
+      const response = await apiCall(`/api/admin/users-with-portfolios?${params}`);
       
-      dispatch({ type: 'SET_USERS', users: response.users, total: response.total });
-      dispatch({ type: 'SET_PAGINATION', module: 'users', pagination: { page, limit: state.pagination.users.limit, total: response.total } });
+      // Transform backend users to frontend format
+      const transformedUsers: AdminUser[] = response.users?.map((user: any) => ({
+        id: user.id.toString(),
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role || 'user',
+        status: user.status || 'active',
+        created_at: user.created_at,
+        last_login: user.last_login,
+        avatar_url: user.avatar_url
+      })) || [];
+      
+      const total = response.pagination?.total || 0;
+      console.log('[AdminContext] Users fetched successfully:', transformedUsers.length, 'total:', total);
+      
+      dispatch({ type: 'SET_USERS', users: transformedUsers, total });
+      dispatch({ type: 'SET_PAGINATION', module: 'users', pagination: { page, limit, total } });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
+      console.error('[AdminContext] Failed to fetch users:', error);
       dispatch({ type: 'SET_ERROR', module: 'users', error: errorMessage });
-      toast.error(errorMessage);
+      toast.error(`User Management Error: ${errorMessage}`);
     } finally {
       dispatch({ type: 'SET_LOADING', module: 'users', loading: false });
     }
@@ -420,20 +441,42 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_ERROR', module: 'transactions', error: null });
     
     try {
+      const limit = state.pagination.transactions.limit;
+      const offset = (page - 1) * limit;
+      
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: state.pagination.transactions.limit.toString(),
+        limit: limit.toString(),
+        offset: offset.toString(),
         ...filters
       });
       
-      const response = await apiCall(`/admin/transactions?${params}`);
+      console.log('[AdminContext] Fetching transactions with params:', params.toString());
+      const response = await apiCall(`/api/admin/transactions?${params}`);
       
-      dispatch({ type: 'SET_TRANSACTIONS', transactions: response.transactions, total: response.total });
-      dispatch({ type: 'SET_PAGINATION', module: 'transactions', pagination: { page, limit: state.pagination.transactions.limit, total: response.total } });
+      // Transform backend transactions to frontend format
+      const transformedTransactions: AdminTransaction[] = response.transactions?.map((tx: any) => ({
+        id: tx.id.toString(),
+        user_id: tx.user_id.toString(),
+        type: tx.type,
+        amount: tx.amount,
+        currency: tx.currency || 'USD',
+        status: tx.status,
+        created_at: tx.created_at,
+        updated_at: tx.updated_at,
+        description: tx.description,
+        metadata: tx.metadata
+      })) || [];
+      
+      const total = response.pagination?.total || 0;
+      console.log('[AdminContext] Transactions fetched successfully:', transformedTransactions.length, 'total:', total);
+      
+      dispatch({ type: 'SET_TRANSACTIONS', transactions: transformedTransactions, total });
+      dispatch({ type: 'SET_PAGINATION', module: 'transactions', pagination: { page, limit, total } });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch transactions';
+      console.error('[AdminContext] Failed to fetch transactions:', error);
       dispatch({ type: 'SET_ERROR', module: 'transactions', error: errorMessage });
-      toast.error(errorMessage);
+      toast.error(`Transaction Management Error: ${errorMessage}`);
     } finally {
       dispatch({ type: 'SET_LOADING', module: 'transactions', loading: false });
     }
@@ -507,12 +550,26 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_ERROR', module: 'stats', error: null });
     
     try {
-      const response = await apiCall('/admin/stats');
-      dispatch({ type: 'SET_STATS', stats: response });
+      console.log('[AdminContext] Fetching admin stats...');
+      const response = await apiCall('/api/admin/stats');
+      
+      // Transform backend response to match frontend expectations
+      const transformedStats: AdminStats = {
+        totalUsers: response.users?.total || 0,
+        activeUsers: response.users?.active || 0,
+        totalTransactions: response.transactions?.total || 0,
+        transactionVolume: response.transactions?.totalVolume || 0,
+        pendingKyc: 0, // Will be implemented when KYC endpoint is ready
+        systemHealth: 'healthy' as const
+      };
+      
+      console.log('[AdminContext] Stats fetched successfully:', transformedStats);
+      dispatch({ type: 'SET_STATS', stats: transformedStats });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch stats';
+      console.error('[AdminContext] Failed to fetch stats:', error);
       dispatch({ type: 'SET_ERROR', module: 'stats', error: errorMessage });
-      toast.error(errorMessage);
+      toast.error(`Admin Dashboard Error: ${errorMessage}`);
     } finally {
       dispatch({ type: 'SET_LOADING', module: 'stats', loading: false });
     }
@@ -625,7 +682,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       type: 'UPDATE_KYC_STATUS', 
       documentId, 
       status: 'approved',
-      reviewerId: user?.id
+      reviewerId: user?.id?.toString()
     });
     toast.success('KYC document approved successfully');
   }, [checkPermission, apiCall, user?.id]);
@@ -644,7 +701,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       type: 'UPDATE_KYC_STATUS', 
       documentId, 
       status: 'rejected',
-      reviewerId: user?.id,
+      reviewerId: user?.id?.toString(),
       reason
     });
     toast.success('KYC document rejected');

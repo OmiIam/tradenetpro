@@ -7,7 +7,6 @@ import { useEffect, useRef } from 'react';
 export function useScrollAnimation(threshold: number = 0.1) {
   const ref = useRef(null);
   const isInView = useInView(ref, { 
-    threshold, 
     once: true,
     margin: '-50px'
   });
@@ -196,7 +195,7 @@ export function useIntersectionAnimation(
   }
 ) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, threshold: 0.1 });
+  const isInView = useInView(ref, { once: true });
   const controls = useAnimation();
 
   useEffect(() => {

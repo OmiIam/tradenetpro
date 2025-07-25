@@ -4,8 +4,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Trash2, Ban, CheckCircle, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from './Button';
-import { Modal } from './Modal';
+import Button from './Button';
+import Modal from './Modal';
 
 export interface ConfirmationAction {
   id: string;

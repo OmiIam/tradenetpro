@@ -4,10 +4,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface GlowingCardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface GlowingCardProps {
   glowColor?: 'blue' | 'green' | 'red' | 'yellow' | 'purple' | 'pink';
   intensity?: 'low' | 'medium' | 'high';
   animated?: boolean;
+  className?: string;
   children: React.ReactNode;
 }
 
@@ -31,8 +32,7 @@ export default function GlowingCard({
   intensity = 'medium',
   animated = true,
   className,
-  children,
-  ...props
+  children
 }: GlowingCardProps) {
   return (
     <motion.div
@@ -42,8 +42,8 @@ export default function GlowingCard({
         glowIntensity[intensity],
         className
       )}
-      initial={animated ? { opacity: 0, scale: 0.95 } : false}
-      animate={animated ? { opacity: 1, scale: 1 } : false}
+      initial={animated ? { opacity: 0, scale: 0.95 } : undefined}
+      animate={animated ? { opacity: 1, scale: 1 } : undefined}
       whileHover={animated ? {
         scale: 1.02,
         boxShadow: `0 25px 50px -12px ${
@@ -56,7 +56,6 @@ export default function GlowingCard({
         }`
       } : undefined}
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      {...props}
     >
       {/* Animated background gradient */}
       {animated && (

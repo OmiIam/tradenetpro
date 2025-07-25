@@ -4,11 +4,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+interface BadgeProps {
   variant?: 'default' | 'secondary' | 'success' | 'warning' | 'danger' | 'info';
   size?: 'sm' | 'md' | 'lg';
   pill?: boolean;
-  dot?: boolean;
+  dot?: boolean;  
+  className?: string;
   children: React.ReactNode;
 }
 
@@ -33,8 +34,7 @@ export default function Badge({
   pill = false,
   dot = false,
   className,
-  children,
-  ...props
+  children
 }: BadgeProps) {
   return (
     <motion.span
@@ -53,7 +53,6 @@ export default function Badge({
         // Custom className
         className
       )}
-      {...props}
     >
       {dot && (
         <div 

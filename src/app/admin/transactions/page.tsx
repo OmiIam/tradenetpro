@@ -5,8 +5,8 @@ import { Search, Filter, Download, Ban, CheckCircle } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin, AdminTransaction } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { MobileInput, MobileSelect } from '@/components/ui/MobileForm';
 import MobileTable from '@/components/ui/MobileTable';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
@@ -62,7 +62,7 @@ function TransactionsPageContent() {
       key: 'details',
       label: 'Transaction',
       primary: true,
-      render: (_, transaction: AdminTransaction) => (
+      render: (_: any, transaction: AdminTransaction) => (
         <div>
           <p className="font-semibold">{transaction.id}</p>
           <p className="text-sm text-gray-400 capitalize">{transaction.type}</p>
@@ -178,7 +178,6 @@ function TransactionsPageContent() {
           <MobileTable
             data={state.transactions}
             columns={transactionColumns}
-            loading={state.loading.transactions}
             emptyMessage="No transactions found"
             onRowClick={(transaction) => {
               if (canWrite && transaction.status === 'pending') {
@@ -189,7 +188,7 @@ function TransactionsPageContent() {
         </CardContent>
       </Card>
 
-      <ConfirmationModal />
+      {ConfirmationModal}
     </div>
   );
 }

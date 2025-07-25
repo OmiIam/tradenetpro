@@ -5,11 +5,11 @@ import { Search, CheckCircle, XCircle, Eye } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin, AdminKycDocument } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { MobileInput, MobileSelect, MobileTextarea } from '@/components/ui/MobileForm';
 import MobileTable from '@/components/ui/MobileTable';
-import { Modal } from '@/components/ui/Modal';
+import Modal from '@/components/ui/Modal';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import { useConfirmation, confirmationActions } from '@/components/ui/ConfirmationModal';
 
@@ -72,7 +72,7 @@ function KycPageContent() {
       key: 'details',
       label: 'Document',
       primary: true,
-      render: (_, doc: AdminKycDocument) => (
+      render: (_: any, doc: AdminKycDocument) => (
         <div>
           <p className="font-semibold capitalize">{doc.document_type.replace('_', ' ')}</p>
           <p className="text-sm text-gray-400">User: {doc.user_id}</p>
@@ -159,7 +159,6 @@ function KycPageContent() {
           <MobileTable
             data={state.kycDocuments}
             columns={kycColumns}
-            loading={state.loading.kyc}
             emptyMessage="No KYC documents found"
             onRowClick={(doc) => setReviewingDoc(doc)}
           />
@@ -248,7 +247,7 @@ function KycPageContent() {
         )}
       </Modal>
 
-      <ConfirmationModal />
+      {ConfirmationModal}
     </div>
   );
 }

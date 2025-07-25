@@ -132,7 +132,7 @@ export default function Dashboard() {
             value: Math.abs(dashboardData.portfolio.todayPnL),
             positive: dashboardData.portfolio.todayPnL >= 0
           } : undefined}
-          color={dashboardData?.portfolio.todayPnL >= 0 ? "green" : "red"}
+          color={dashboardData?.portfolio.todayPnL && dashboardData.portfolio.todayPnL >= 0 ? "green" : "red"}
         />
       </ResponsiveGrid>
 
@@ -204,7 +204,7 @@ export default function Dashboard() {
             : 0}
           icon={<TrendingUp className="w-5 h-5" />}
           animated={true}
-          glowColor={dashboardData?.portfolio.todayPnL >= 0 ? "green" : "red"}
+          glowColor={dashboardData?.portfolio.todayPnL && dashboardData.portfolio.todayPnL >= 0 ? "green" : "red"}
         />
         <StatsCard
           title="Active Positions"

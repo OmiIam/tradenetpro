@@ -10,6 +10,7 @@ import createUserRoutes from './routes/user';
 import verificationRoutes from './routes/verification';
 import createDebugRoutes from './routes/debug';
 import proxyRoutes from './routes/proxy';
+import healthRoutes from './routes/health';
 
 // Load environment variables
 dotenv.config();
@@ -180,6 +181,10 @@ if (useRemoteApi) {
   app.use('/api/verification', verificationRoutes);
   app.use('/api/debug', createDebugRoutes(database!));
 }
+
+// Health routes are available regardless of proxy mode
+app.use('/api', healthRoutes);
+console.log('[SERVER] Health check routes registered at /api/health');
 
 // API documentation endpoint
 app.get('/api', (req, res) => {

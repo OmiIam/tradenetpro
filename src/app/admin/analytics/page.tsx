@@ -5,9 +5,10 @@ import { TrendingUp, Users, DollarSign, Activity, Download } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import StatsCard from '@/components/StatsCard';
+import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import StatCard from '@/components/admin/StatCard';
+import AnalyticsCharts from '@/components/admin/AnalyticsCharts';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 
 function AnalyticsPageContent() {
@@ -61,46 +62,60 @@ function AnalyticsPageContent() {
       <div>
         <h2 className="text-xl font-semibold text-white mb-4">Key Performance Indicators</h2>
         <ResponsiveGrid cols={{ base: 1, sm: 2, lg: 4 }} gap="lg">
-          <StatsCard
+          <StatCard
             title="Total Users"
             value={state.stats.totalUsers}
-            change={state.stats.totalUsers - previousPeriod.totalUsers}
-            changePercent={calculateGrowthRate(state.stats.totalUsers, previousPeriod.totalUsers)}
-            icon={<Users className="w-5 h-5" />}
+            delta={{
+              value: calculateGrowthRate(state.stats.totalUsers, previousPeriod.totalUsers),
+              isPositive: state.stats.totalUsers >= previousPeriod.totalUsers
+            }}
+            icon={Users}
+            color="blue"
             animated={true}
-            glowColor="blue"
           />
           
-          <StatsCard
+          <StatCard
             title="Active Users"
             value={state.stats.activeUsers}
-            change={state.stats.activeUsers - previousPeriod.activeUsers}
-            changePercent={calculateGrowthRate(state.stats.activeUsers, previousPeriod.activeUsers)}
-            icon={<Activity className="w-5 h-5" />}
+            delta={{
+              value: calculateGrowthRate(state.stats.activeUsers, previousPeriod.activeUsers),
+              isPositive: state.stats.activeUsers >= previousPeriod.activeUsers
+            }}
+            icon={Activity}
+            color="green"
             animated={true}
-            glowColor="green"
           />
           
-          <StatsCard
+          <StatCard
             title="Transaction Volume"
-            value={state.stats.transactionVolume}
-            change={state.stats.transactionVolume - previousPeriod.transactionVolume}
-            changePercent={calculateGrowthRate(state.stats.transactionVolume, previousPeriod.transactionVolume)}
-            icon={<DollarSign className="w-5 h-5" />}
+            value={`$${state.stats.transactionVolume.toLocaleString()}`}
+            delta={{
+              value: calculateGrowthRate(state.stats.transactionVolume, previousPeriod.transactionVolume),
+              isPositive: state.stats.transactionVolume >= previousPeriod.transactionVolume
+            }}
+            icon={DollarSign}
+            color="amber"
             animated={true}
-            glowColor="yellow"
           />
           
-          <StatsCard
+          <StatCard
             title="Total Transactions"
             value={state.stats.totalTransactions}
-            change={state.stats.totalTransactions - previousPeriod.totalTransactions}
-            changePercent={calculateGrowthRate(state.stats.totalTransactions, previousPeriod.totalTransactions)}
-            icon={<TrendingUp className="w-5 h-5" />}
+            delta={{
+              value: calculateGrowthRate(state.stats.totalTransactions, previousPeriod.totalTransactions),
+              isPositive: state.stats.totalTransactions >= previousPeriod.totalTransactions
+            }}
+            icon={TrendingUp}
+            color="purple"
             animated={true}
-            glowColor="purple"
           />
         </ResponsiveGrid>
+      </div>
+
+      {/* Visual Analytics Charts */}
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-4">Performance Analytics</h2>
+        <AnalyticsCharts />
       </div>
 
       {/* Analytics Cards */}

@@ -5,13 +5,17 @@ import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'warning';
   size?: 'sm' | 'md' | 'lg' | 'xl';
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
+  disabled?: boolean;
+  className?: string;
+  type?: 'button' | 'submit' | 'reset';
+  onClick?: () => void;
   children: React.ReactNode;
 }
 
@@ -21,7 +25,8 @@ const buttonVariants = {
   outline: 'border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white',
   ghost: 'text-gray-300 hover:text-white hover:bg-slate-700/50',
   danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl',
-  success: 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
+  success: 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl',
+  warning: 'bg-yellow-600 hover:bg-yellow-700 text-white shadow-lg hover:shadow-xl'
 };
 
 const buttonSizes = {
@@ -40,8 +45,9 @@ export default function Button({
   fullWidth = false,
   disabled,
   className,
-  children,
-  ...props
+  type = 'button',
+  onClick,
+  children
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -64,7 +70,8 @@ export default function Button({
         className
       )}
       disabled={isDisabled}
-      {...props}
+      type={type}
+      onClick={onClick}
     >
       {loading && <Loader2 className="w-4 h-4 animate-spin" />}
       {!loading && leftIcon && leftIcon}

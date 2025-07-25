@@ -4,16 +4,20 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface InteractiveButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface InteractiveButtonProps {
   variant?: 'magnetic' | 'ripple' | 'glow' | 'morph' | 'liquid';
+  className?: string;
+  onClick?: () => void;
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
 export default function InteractiveButton({
   variant = 'magnetic',
   className,
-  children,
-  ...props
+  onClick,
+  disabled,
+  children
 }: InteractiveButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -39,7 +43,7 @@ export default function InteractiveButton({
       }, 600);
     }
     
-    props.onClick?.(e);
+    onClick?.();
   };
 
   const getButtonVariant = () => {
@@ -61,7 +65,7 @@ export default function InteractiveButton({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onMouseMove={handleMouseMove}
-            {...props}
+            disabled={disabled}
           >
             {children}
           </motion.button>
@@ -77,7 +81,7 @@ export default function InteractiveButton({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleClick}
-            {...props}
+            disabled={disabled}
           >
             {children}
             {ripples.map((ripple) => (
@@ -115,7 +119,7 @@ export default function InteractiveButton({
             }}
             whileTap={{ scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            {...props}
+            disabled={disabled}
           >
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 opacity-0"
@@ -142,7 +146,7 @@ export default function InteractiveButton({
               scale: 0.95
             }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            {...props}
+            disabled={disabled}
           >
             <motion.div
               className="absolute inset-0"
@@ -172,7 +176,7 @@ export default function InteractiveButton({
             )}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            {...props}
+            disabled={disabled}
           >
             <motion.div
               className="absolute inset-0 bg-blue-500"
@@ -191,7 +195,7 @@ export default function InteractiveButton({
 
       default:
         return (
-          <button className={className} {...props}>
+          <button className={className} onClick={onClick} disabled={disabled}>
             {children}
           </button>
         );

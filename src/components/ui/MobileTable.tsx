@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, MoreVertical, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MobileCard } from './MobileCard';
+import MobileCard from './MobileCard';
 
 interface MobileTableColumn<T = any> {
   key: string;

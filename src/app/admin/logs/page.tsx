@@ -5,8 +5,8 @@ import { Search, Download, Filter, RefreshCw } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin, AdminLog } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { MobileInput, MobileSelect } from '@/components/ui/MobileForm';
 import MobileTable from '@/components/ui/MobileTable';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
@@ -194,7 +194,6 @@ function LogsPageContent() {
           <MobileTable
             data={state.logs}
             columns={logColumns}
-            loading={state.loading.logs}
             emptyMessage="No logs found"
             expandable={true}
           />
