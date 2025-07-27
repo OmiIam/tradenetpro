@@ -12,7 +12,8 @@ import {
   X,
   ChevronRight,
   Bell,
-  User
+  User,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,6 +30,7 @@ const navigationItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: Home, href: '/dashboard' },
   { id: 'trading', label: 'Trading', icon: BarChart3, href: '/trading' },
   { id: 'portfolio', label: 'Portfolio', icon: Wallet, href: '/portfolio' },
+  { id: 'kyc', label: 'KYC Verification', icon: Shield, href: '/kyc' },
   { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/settings' }
 ];

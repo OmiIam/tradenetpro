@@ -5,6 +5,7 @@ import { validatePagination } from '../middleware/validation';
 import { body } from 'express-validator';
 import DatabaseManager from '../models/Database';
 import rateLimit from 'express-rate-limit';
+import createKYCRoutes from './kyc';
 
 const router = express.Router();
 
@@ -108,6 +109,9 @@ export default function createUserRoutes(database: DatabaseManager) {
   router.get('/stats', async (req: express.Request, res: express.Response) => {
     await userController.getAccountStats(req, res);
   });
+
+  // KYC Routes
+  router.use('/kyc', createKYCRoutes(database.getDatabase()));
 
   return router;
 }

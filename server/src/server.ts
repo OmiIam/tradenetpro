@@ -11,6 +11,7 @@ import verificationRoutes from './routes/verification';
 import createDebugRoutes from './routes/debug';
 import proxyRoutes from './routes/proxy';
 import healthRoutes from './routes/health';
+import marketRoutes from './routes/market';
 
 // Load environment variables
 dotenv.config();
@@ -180,6 +181,8 @@ if (useRemoteApi) {
   app.use('/api/user', createUserRoutes(database!));
   app.use('/api/verification', verificationRoutes);
   app.use('/api/debug', createDebugRoutes(database!));
+  app.use('/api/market', marketRoutes);
+  console.log('[SERVER] Market data routes registered at /api/market');
 }
 
 // Health routes are available regardless of proxy mode

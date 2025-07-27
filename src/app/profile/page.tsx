@@ -1,30 +1,60 @@
 "use client";
 
-import React, { useState } from 'react';
-import { User, Mail, Shield, Bell, CreditCard, Key, Save, Camera, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Shield, Bell, CreditCard, Key, Save, Camera, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { useUserProfile } from '@/hooks/useUserDashboard';
+import api from '@/lib/api';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'payment'>('profile');
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
+  const { profile, loading: profileLoading, error: profileError, updateProfile } = useUserProfile();
 
   // Profile form state
   const [profileData, setProfileData] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    country: 'United States',
-    timezone: 'UTC-5 (Eastern Time)',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    country: '',
+    timezone: 'UTC',
+    bio: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
   });
+
+  // Initialize form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setProfileData({
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        email: profile.email || '',
+        phone: profile.phone_number || '',
+        country: profile.country || '',
+        timezone: profile.timezone || 'UTC',
+        bio: profile.bio || '',
+        addressLine1: profile.address_line_1 || '',
+        addressLine2: profile.address_line_2 || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        postalCode: profile.postal_code || '',
+      });
+    }
+  }, [profile]);
 
   // Security form state
   const [securityData, setSecurityData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
-    twoFactorEnabled: true,
+    twoFactorEnabled: false,
   });
 
   // Notification preferences
@@ -36,17 +66,103 @@ export default function ProfilePage() {
     maintenanceUpdates: true,
   });
 
+  // Initialize notification preferences from profile
+  useEffect(() => {
+    if (profile) {
+      setNotifications({
+        emailAlerts: profile.notification_email ?? true,
+        priceAlerts: profile.notification_push ?? true,
+        tradeConfirmations: profile.notification_email ?? true,
+        marketNews: false,
+        maintenanceUpdates: true,
+      });
+      setSecurityData(prev => ({
+        ...prev,
+        twoFactorEnabled: profile.two_factor_enabled ?? false,
+      }));
+    }
+  }, [profile]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSaveStatus('idle');
     
-    // Mock API call
-    setTimeout(() => {
+    try {
+      // Prepare update data based on active tab
+      let updateData: any = {};
+      
+      if (activeTab === 'profile') {
+        updateData = {
+          first_name: profileData.firstName,
+          last_name: profileData.lastName,
+          phone_number: profileData.phone,
+          country: profileData.country,
+          timezone: profileData.timezone,
+          bio: profileData.bio,
+          address_line_1: profileData.addressLine1,
+          address_line_2: profileData.addressLine2,
+          city: profileData.city,
+          state: profileData.state,
+          postal_code: profileData.postalCode,
+        };
+      } else if (activeTab === 'notifications') {
+        updateData = {
+          notification_email: notifications.emailAlerts,
+          notification_push: notifications.priceAlerts,
+          notification_sms: false,
+        };
+      } else if (activeTab === 'security') {
+        updateData = {
+          two_factor_enabled: securityData.twoFactorEnabled,
+        };
+      }
+
+      await updateProfile(updateData);
       setSaveStatus('success');
-      setLoading(false);
       setTimeout(() => setSaveStatus('idle'), 3000);
-    }, 1000);
+    } catch (error: any) {
+      console.error('Save error:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (securityData.newPassword !== securityData.confirmPassword) {
+      setSaveStatus('error');
+      return;
+    }
+
+    setLoading(true);
+    setSaveStatus('idle');
+
+    try {
+      await api.put('/api/user/change-password', {
+        currentPassword: securityData.currentPassword,
+        newPassword: securityData.newPassword,
+      });
+
+      setSecurityData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+        twoFactorEnabled: securityData.twoFactorEnabled,
+      });
+
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (error: any) {
+      console.error('Password change error:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 5000);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const tabs = [
@@ -55,6 +171,21 @@ export default function ProfilePage() {
     { id: 'notifications', name: 'Notifications', icon: <Bell className="w-5 h-5" /> },
     { id: 'payment', name: 'Payment', icon: <CreditCard className="w-5 h-5" /> },
   ];
+
+  if (profileLoading) {
+    return (
+      <ProtectedRoute>
+        <div className="max-w-4xl mx-auto py-8 px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">Loading your profile...</p>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   return (
     <ProtectedRoute>
@@ -143,6 +274,68 @@ export default function ProfilePage() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-gray-300 mb-2">Bio</label>
+                    <textarea
+                      className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                      rows={3}
+                      placeholder="Tell us about yourself..."
+                      value={profileData.bio}
+                      onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-300 mb-2">Address Line 1</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                        value={profileData.addressLine1}
+                        onChange={(e) => setProfileData({...profileData, addressLine1: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Address Line 2</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                        value={profileData.addressLine2}
+                        onChange={(e) => setProfileData({...profileData, addressLine2: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-gray-300 mb-2">City</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                        value={profileData.city}
+                        onChange={(e) => setProfileData({...profileData, city: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">State/Province</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                        value={profileData.state}
+                        onChange={(e) => setProfileData({...profileData, state: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Postal Code</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                        value={profileData.postalCode}
+                        onChange={(e) => setProfileData({...profileData, postalCode: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-gray-300 mb-2">Country</label>
@@ -151,11 +344,15 @@ export default function ProfilePage() {
                         value={profileData.country}
                         onChange={(e) => setProfileData({...profileData, country: e.target.value})}
                       >
+                        <option value="">Select Country</option>
                         <option value="United States">United States</option>
                         <option value="Canada">Canada</option>
                         <option value="United Kingdom">United Kingdom</option>
                         <option value="Germany">Germany</option>
                         <option value="France">France</option>
+                        <option value="Australia">Australia</option>
+                        <option value="Japan">Japan</option>
+                        <option value="Singapore">Singapore</option>
                       </select>
                     </div>
                     <div>
@@ -165,10 +362,15 @@ export default function ProfilePage() {
                         value={profileData.timezone}
                         onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
                       >
-                        <option value="UTC-5 (Eastern Time)">UTC-5 (Eastern Time)</option>
-                        <option value="UTC-6 (Central Time)">UTC-6 (Central Time)</option>
-                        <option value="UTC-7 (Mountain Time)">UTC-7 (Mountain Time)</option>
-                        <option value="UTC-8 (Pacific Time)">UTC-8 (Pacific Time)</option>
+                        <option value="UTC">UTC</option>
+                        <option value="UTC-5">UTC-5 (Eastern Time)</option>
+                        <option value="UTC-6">UTC-6 (Central Time)</option>
+                        <option value="UTC-7">UTC-7 (Mountain Time)</option>
+                        <option value="UTC-8">UTC-8 (Pacific Time)</option>
+                        <option value="UTC+1">UTC+1 (Central European Time)</option>
+                        <option value="UTC+8">UTC+8 (Singapore Time)</option>
+                        <option value="UTC+9">UTC+9 (Japan Time)</option>
+                        <option value="UTC+10">UTC+10 (Australian Eastern Time)</option>
                       </select>
                     </div>
                   </div>
@@ -197,7 +399,7 @@ export default function ProfilePage() {
                   {/* Password Change */}
                   <div className="border border-white/10 rounded-lg p-6">
                     <h3 className="text-lg font-semibold text-white mb-4">Change Password</h3>
-                    <form onSubmit={handleSave} className="space-y-4">
+                    <form onSubmit={handlePasswordChange} className="space-y-4">
                       <div>
                         <label className="block text-gray-300 mb-2">Current Password</label>
                         <input

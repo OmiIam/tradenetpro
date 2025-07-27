@@ -50,6 +50,9 @@ export class DatabaseManager {
         state TEXT,
         postal_code TEXT,
         country TEXT,
+        timezone TEXT DEFAULT 'UTC',
+        profile_picture TEXT,
+        bio TEXT,
         role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
         status TEXT NOT NULL DEFAULT 'pending_verification' CHECK (status IN ('active', 'suspended', 'inactive', 'pending_verification', 'pending_approval')),
         email_verified BOOLEAN DEFAULT FALSE,
@@ -58,6 +61,10 @@ export class DatabaseManager {
         privacy_accepted BOOLEAN DEFAULT FALSE,
         kyc_status TEXT DEFAULT 'pending' CHECK (kyc_status IN ('pending', 'approved', 'rejected', 'under_review')),
         account_funded BOOLEAN DEFAULT FALSE,
+        two_factor_enabled BOOLEAN DEFAULT FALSE,
+        notification_email BOOLEAN DEFAULT TRUE,
+        notification_push BOOLEAN DEFAULT TRUE,
+        notification_sms BOOLEAN DEFAULT FALSE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_login DATETIME,
@@ -88,8 +95,19 @@ export class DatabaseManager {
         user_id INTEGER NOT NULL,
         type TEXT NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'trade', 'adjustment')),
         amount REAL NOT NULL,
+        asset_type TEXT DEFAULT 'USD' CHECK (asset_type IN ('USD', 'BTC', 'ETH', 'USDT', 'BNB', 'ADA', 'DOT', 'LINK')),
+        asset_symbol TEXT,
+        asset_quantity REAL,
+        exchange_rate REAL,
+        fee REAL DEFAULT 0,
+        blockchain_hash TEXT,
+        from_address TEXT,
+        to_address TEXT,
+        confirmation_count INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'failed', 'cancelled')),
         description TEXT,
         admin_id INTEGER,
+        processed_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
@@ -171,6 +189,64 @@ export class DatabaseManager {
         FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // Market data cache table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS market_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        name TEXT NOT NULL,
+        current_price REAL NOT NULL,
+        price_change_24h REAL DEFAULT 0,
+        price_change_percentage_24h REAL DEFAULT 0,
+        market_cap REAL DEFAULT 0,
+        volume_24h REAL DEFAULT 0,
+        circulating_supply REAL DEFAULT 0,
+        total_supply REAL DEFAULT 0,
+        max_supply REAL DEFAULT 0,
+        market_cap_rank INTEGER DEFAULT 0,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+        data_source TEXT DEFAULT 'coingecko',
+        asset_type TEXT DEFAULT 'crypto' CHECK (asset_type IN ('crypto', 'stock', 'forex', 'commodity'))
+      )
+    `);
+
+    // User audit logs table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        admin_id INTEGER,
+        action TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        resource_id INTEGER,
+        old_values TEXT,
+        new_values TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    // User notifications table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type TEXT DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
+        category TEXT DEFAULT 'general' CHECK (category IN ('general', 'trading', 'security', 'kyc', 'deposit', 'withdrawal')),
+        read BOOLEAN DEFAULT FALSE,
+        action_url TEXT,
+        expires_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        read_at DATETIME,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
   }
 
   private createIndexes() {
@@ -180,12 +256,22 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_users_kyc_status ON users(kyc_status);
       CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id);
       CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
+      CREATE INDEX IF NOT EXISTS idx_transactions_asset_type ON transactions(asset_type);
+      CREATE INDEX IF NOT EXISTS idx_transactions_blockchain_hash ON transactions(blockchain_hash);
       CREATE INDEX IF NOT EXISTS idx_portfolio_positions_portfolio_id ON portfolio_positions(portfolio_id);
       CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
       CREATE INDEX IF NOT EXISTS idx_verification_tokens_user_id ON verification_tokens(user_id);
       CREATE INDEX IF NOT EXISTS idx_verification_tokens_token ON verification_tokens(token);
       CREATE INDEX IF NOT EXISTS idx_user_documents_user_id ON user_documents(user_id);
       CREATE INDEX IF NOT EXISTS idx_user_notes_user_id ON user_notes(user_id);
+      CREATE INDEX IF NOT EXISTS idx_market_data_symbol ON market_data(symbol);
+      CREATE INDEX IF NOT EXISTS idx_market_data_asset_type ON market_data(asset_type);
+      CREATE INDEX IF NOT EXISTS idx_market_data_last_updated ON market_data(last_updated);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+      CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON user_notifications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_notifications_read ON user_notifications(read);
     `);
   }
 
