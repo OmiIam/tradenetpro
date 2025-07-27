@@ -71,7 +71,29 @@ export function useUserDashboard() {
     try {
       setLoading(true)
       const response = await api.get('/api/user/dashboard')
-      setDashboardData(response.data as DashboardData)
+      
+      // Handle both flat and nested response structures
+      let dashboardData: DashboardData
+      if (response.data.portfolio) {
+        // Expected nested structure
+        dashboardData = response.data as DashboardData
+      } else {
+        // Flat structure - transform it to expected format
+        dashboardData = {
+          portfolio: {
+            totalBalance: response.data.totalBalance || 0,
+            portfolioValue: response.data.portfolioValue || 0,
+            totalTrades: response.data.totalTrades || 0,
+            winRate: response.data.winRate || 0,
+            todayPnL: response.data.todayPnL || 0,
+            totalReturn: response.data.totalReturn || 0
+          },
+          positions: response.data.positions || [],
+          recentTransactions: response.data.recentTransactions || []
+        }
+      }
+      
+      setDashboardData(dashboardData)
       setError(null)
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err)
