@@ -205,7 +205,12 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                   <div className="text-right">
                     <p className="text-gray-400 text-sm">Current Balance</p>
                     <p className="text-green-400 font-semibold">
-                      ${(availableUsers.find(u => u.id === selectedUser.id)?.total_balance || selectedUser.total_balance || 0).toLocaleString()}
+                      ${(() => {
+                        const currentUser = availableUsers.find(u => u.id === selectedUser.id);
+                        const currentBalance = currentUser?.total_balance || selectedUser.total_balance || 0;
+                        console.log('Debug selected user balance:', selectedUser.id, currentBalance, currentUser);
+                        return currentBalance.toLocaleString();
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -304,7 +309,12 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-gray-400">Current Balance:</span>
                 <span className="text-green-400">
-                  ${(availableUsers.find(u => u.id === selectedUser?.id)?.total_balance || selectedUser?.total_balance || 0).toLocaleString()}
+                  ${(() => {
+                    const currentUser = availableUsers.find(u => u.id === selectedUser?.id);
+                    const currentBalance = currentUser?.total_balance || selectedUser?.total_balance || 0;
+                    console.log('Debug balance for user', selectedUser?.id, ':', currentBalance, 'from', currentUser || selectedUser);
+                    return currentBalance.toLocaleString();
+                  })()}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -316,10 +326,13 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
               <div className="flex justify-between font-semibold">
                 <span className="text-gray-400">New Balance:</span>
                 <span className="text-white">
-                  ${(
-                    (availableUsers.find(u => u.id === selectedUser?.id)?.total_balance || selectedUser?.total_balance || 0) + 
-                    (adjustmentType === 'add' ? parseFloat(amount || '0') : -parseFloat(amount || '0'))
-                  ).toLocaleString()}
+                  ${(() => {
+                    const currentUser = availableUsers.find(u => u.id === selectedUser?.id);
+                    const currentBalance = currentUser?.total_balance || selectedUser?.total_balance || 0;
+                    const adjustment = adjustmentType === 'add' ? parseFloat(amount || '0') : -parseFloat(amount || '0');
+                    const newBalance = Math.max(0, currentBalance + adjustment);
+                    return newBalance.toLocaleString();
+                  })()}
                 </span>
               </div>
               <div className="pt-2 border-t border-slate-700">

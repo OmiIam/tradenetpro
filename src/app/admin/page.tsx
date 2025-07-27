@@ -120,12 +120,14 @@ function AdminOverviewContent() {
                 total_balance: portfolio.total_balance || (user as any).total_balance || 0
               };
             } catch (error) {
-              // If portfolio fetch fails, use user data balance or generate demo balance
+              // If portfolio fetch fails, use user data balance or generate consistent demo balance
               console.warn(`Failed to fetch portfolio for user ${user.id}:`, error);
+              // Generate consistent demo balance based on user ID to avoid random changes
+              const demoBalance = ((user.id * 1337) % 9000) + 1000; // Consistent demo balance between $1,000-$10,000
               return {
                 ...user,
                 last_login: user.last_login || undefined,
-                total_balance: (user as any).total_balance || Math.floor(Math.random() * 10000) + 1000 // Demo balance for testing
+                total_balance: (user as any).total_balance || demoBalance
               };
             }
           })
@@ -841,13 +843,17 @@ function AdminOverviewContent() {
         isOpen={showBalanceModal}
         onClose={() => setShowBalanceModal(false)}
         onAdjustBalance={handleBalanceAdjustment}
-        availableUsers={users.map(user => ({
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email: user.email,
-          total_balance: user.total_balance || 0
-        }))}
+        availableUsers={users.map(user => {
+          const balance = user.total_balance || 0;
+          console.log('Modal user data:', user.id, user.first_name, 'balance:', balance);
+          return {
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            total_balance: balance
+          };
+        })}
       />
     </div>
   );

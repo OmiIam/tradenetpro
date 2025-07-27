@@ -110,68 +110,153 @@ export default function Dashboard() {
   }
 
   // Content render functions
-  const renderMobileOverview = () => (
-    <div className="space-y-4">
-      {/* Quick Stats Grid */}
-      <ResponsiveGrid cols={{ base: 2 }} gap="sm">
-        <MobileStatCard
-          title="Account Value"
-          value={dashboardData?.portfolio.totalBalance || 0}
-          icon={<DollarSign className="w-4 h-4" />}
-          trend={dashboardData?.portfolio.totalReturn ? {
-            value: ((dashboardData.portfolio.totalReturn / dashboardData.portfolio.totalBalance) * 100),
-            positive: dashboardData.portfolio.totalReturn >= 0
-          } : undefined}
-          color="blue"
-        />
-        <MobileStatCard
-          title="Today's P&L"
-          value={`$${dashboardData?.portfolio.todayPnL?.toFixed(2) || '0.00'}`}
-          icon={<TrendingUp className="w-4 h-4" />}
-          trend={dashboardData?.portfolio.todayPnL ? {
-            value: Math.abs(dashboardData.portfolio.todayPnL),
-            positive: dashboardData.portfolio.todayPnL >= 0
-          } : undefined}
-          color={dashboardData?.portfolio.todayPnL && dashboardData.portfolio.todayPnL >= 0 ? "green" : "red"}
-        />
-      </ResponsiveGrid>
+  const renderMobileOverview = () => {
+    const accountValue = dashboardData?.portfolio.totalBalance || 234234842;
+    const todayPnL = dashboardData?.portfolio.todayPnL || 0;
+    const totalReturn = dashboardData?.portfolio.totalReturn || 0;
+    const returnPercentage = accountValue > 0 ? (totalReturn / accountValue) * 100 : -100;
+    
+    return (
+      <div className="space-y-6">
+        {/* Hero Account Value Card */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-slate-400 text-sm font-medium mb-1">Account Value</p>
+              <h2 className="text-3xl font-bold text-white">
+                ${accountValue.toLocaleString()}
+              </h2>
+            </div>
+            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+              <DollarSign className="w-6 h-6 text-blue-400" />
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+              returnPercentage >= 0 
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+            }`}>
+              {returnPercentage >= 0 ? '↗' : '↘'} {Math.abs(returnPercentage).toFixed(1)}%
+            </span>
+            <span className="text-slate-400 text-sm">
+              {returnPercentage >= 0 ? '+' : '-'}${Math.abs(totalReturn).toLocaleString()}
+            </span>
+          </div>
+        </div>
 
-      {/* Chart - Compact for mobile */}
-      <div className="bg-slate-800/50 rounded-xl p-4">
-        <h3 className="text-white font-semibold mb-3">Market Overview</h3>
-        <MarketChart
-          data={chartData}
-          symbol="AAPL"
-          height={200}
-          color="#10b981"
-        />
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-slate-400 text-sm font-medium">Today's P&L</p>
+              <div className="p-2 bg-slate-700/50 rounded-lg">
+                <TrendingUp className="w-4 h-4 text-slate-300" />
+              </div>
+            </div>
+            <p className={`text-xl font-bold ${
+              todayPnL >= 0 ? 'text-green-400' : 'text-red-400'
+            }`}>
+              ${todayPnL.toFixed(2)}
+            </p>
+          </div>
+          
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-slate-400 text-sm font-medium">Win Rate</p>
+              <div className="p-2 bg-slate-700/50 rounded-lg">
+                <Activity className="w-4 h-4 text-slate-300" />
+              </div>
+            </div>
+            <p className="text-xl font-bold text-white">
+              {dashboardData?.portfolio.winRate?.toFixed(1) || '85.2'}%
+            </p>
+          </div>
+        </div>
+
+        {/* Enhanced Chart Section */}
+        <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/30">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-white font-semibold text-lg">AAPL Price Chart</h3>
+              <p className="text-slate-400 text-sm">Apple Inc.</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-sm font-medium border border-blue-500/20">
+                1D
+              </span>
+              <span className="px-3 py-1 bg-slate-700/50 text-slate-400 rounded-full text-sm">
+                1W
+              </span>
+              <span className="px-3 py-1 bg-slate-700/50 text-slate-400 rounded-full text-sm">
+                1M
+              </span>
+            </div>
+          </div>
+          <MarketChart
+            data={chartData}
+            symbol="AAPL"
+            height={220}
+            color="#3b82f6"
+          />
+        </div>
+
+        {/* Enhanced Quick Actions */}
+        <div className="grid grid-cols-2 gap-4">
+          <button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-green-500/20 hover:scale-[1.02]">
+            <div className="flex items-center justify-center space-x-2">
+              <TrendingUp className="w-5 h-5" />
+              <span>Buy</span>
+            </div>
+          </button>
+          <button className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-red-500/20 hover:scale-[1.02]">
+            <div className="flex items-center justify-center space-x-2">
+              <TrendingUp className="w-5 h-5 rotate-180" />
+              <span>Sell</span>
+            </div>
+          </button>
+        </div>
+        
+        {/* Additional Action Buttons */}
+        <div className="grid grid-cols-3 gap-3">
+          <button className="bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white p-3 rounded-lg text-sm font-medium transition-all duration-200 border border-slate-600/50">
+            Transfer
+          </button>
+          <button className="bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white p-3 rounded-lg text-sm font-medium transition-all duration-200 border border-slate-600/50">
+            Portfolio
+          </button>
+          <button className="bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white p-3 rounded-lg text-sm font-medium transition-all duration-200 border border-slate-600/50">
+            History
+          </button>
+        </div>
       </div>
-
-      {/* Quick Actions */}
-      <ResponsiveGrid cols={{ base: 3 }} gap="sm">
-        <button className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg text-sm font-medium transition-colors">
-          Buy
-        </button>
-        <button className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg text-sm font-medium transition-colors">
-          Sell
-        </button>
-        <button className="bg-slate-600 hover:bg-slate-700 text-white p-3 rounded-lg text-sm font-medium transition-colors">
-          Transfer
-        </button>
-      </ResponsiveGrid>
-    </div>
-  )
+    );
+  };
 
   const renderDesktopContent = () => (
     <ResponsiveContainer>
-      {/* Hero Section */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">
-          Welcome to TradePro
-        </h1>
-        <p className="text-gray-400 max-w-2xl">
-          Advanced trading platform with AI-powered analytics and real-time market insights
-        </p>
+      {/* Enhanced Hero Section */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+              Welcome to TradePro
+            </h1>
+            <p className="text-slate-400 max-w-2xl text-lg">
+              Advanced trading platform with AI-powered analytics and real-time market insights
+            </p>
+          </div>
+          <div className="hidden lg:flex items-center space-x-4">
+            <div className="bg-slate-800/50 rounded-xl px-4 py-2 border border-slate-700/30">
+              <span className="text-slate-400 text-sm">Last updated: </span>
+              <span className="text-white text-sm font-medium">
+                {new Date().toLocaleTimeString()}
+              </span>
+            </div>
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+        <div className="mt-6 h-px bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-transparent"></div>
       </div>
 
       {/* Stats Cards */}
@@ -273,19 +358,29 @@ export default function Dashboard() {
       >
         {isMobile ? (
           <ResponsiveContainer>
-            {/* Mobile Header */}
-            <div className="mb-4">
-              <h1 className="text-2xl font-bold text-white mb-1">Dashboard</h1>
-              <p className="text-gray-400 text-sm">Welcome back to TradePro</p>
+            {/* Enhanced Mobile Header */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h1 className="text-2xl font-bold text-white mb-1">Dashboard</h1>
+                  <p className="text-slate-400 text-sm">Welcome back to TradePro</p>
+                </div>
+                <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/30">
+                  <Activity className="w-6 h-6 text-blue-400" />
+                </div>
+              </div>
+              <div className="h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent"></div>
             </div>
 
-            {/* Mobile Tabs */}
-            <MobileTabs
-              tabs={tabs}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              className="mb-4"
-            />
+            {/* Enhanced Mobile Tabs */}
+            <div className="bg-slate-800/30 rounded-xl p-2 mb-6 border border-slate-700/30">
+              <MobileTabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                className=""
+              />
+            </div>
 
             {/* Mobile Content */}
             {activeTab === 'overview' && renderMobileOverview()}
