@@ -20,12 +20,14 @@ interface BalanceAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdjustBalance: (userId: number, amount: number, type: 'add' | 'subtract', reason: string) => Promise<void>;
+  availableUsers?: User[]; // Optional list of users for fallback search
 }
 
 export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
   isOpen,
   onClose,
-  onAdjustBalance
+  onAdjustBalance,
+  availableUsers = []
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -45,19 +47,37 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
 
     setSearching(true);
     try {
-      // Use real API to search users
-      const users = await adminApi.searchUsers(query, 10);
-      
-      // Transform backend user format to component format
-      const transformedUsers: User[] = users.map(user => ({
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        total_balance: user.total_balance || 0 // Always use total_balance
-      }));
+      // Try API search first
+      try {
+        const users = await adminApi.searchUsers(query, 10);
+        
+        // Transform backend user format to component format
+        const transformedUsers: User[] = users.map(user => ({
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          total_balance: user.total_balance || 0 // Always use total_balance
+        }));
 
-      setSearchResults(transformedUsers);
+        setSearchResults(transformedUsers);
+        return;
+      } catch (apiError) {
+        console.warn('API search failed, falling back to local search:', apiError);
+      }
+
+      // Fallback to searching available users locally
+      const localResults = availableUsers.filter(user => {
+        const searchTerm = query.toLowerCase();
+        return (
+          user.first_name.toLowerCase().includes(searchTerm) ||
+          user.last_name.toLowerCase().includes(searchTerm) ||
+          user.email.toLowerCase().includes(searchTerm) ||
+          `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm)
+        );
+      }).slice(0, 10); // Limit to 10 results
+
+      setSearchResults(localResults);
     } catch (error) {
       console.error('Search failed:', error);
       setSearchResults([]);
