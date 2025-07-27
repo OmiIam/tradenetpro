@@ -23,11 +23,7 @@ export default function PortfolioPage() {
       <div className="max-w-5xl mx-auto py-10 px-4">
       <h1 className="text-3xl font-bold text-white mb-6">My Portfolio</h1>
       {/* Portfolio Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center">
-          <span className="text-gray-400 text-sm mb-1">Total Balance</span>
-          <span className="text-2xl font-bold text-blue-400">${portfolio.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center">
           <span className="text-gray-400 text-sm mb-1">Assets</span>
           <div className="flex flex-wrap gap-3 justify-center mt-2">
