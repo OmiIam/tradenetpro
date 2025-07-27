@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, ShieldOff, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import ConfirmationModal from '@/components/ui/ConfirmationModal';
+import { useConfirmation, confirmationActions } from '@/components/ui/ConfirmationModal';
 
 interface User {
   id: number;
@@ -26,28 +26,37 @@ export const UserStatusToggle: React.FC<UserStatusToggleProps> = ({
   onStatusChange
 }) => {
   const [loading, setLoading] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'activate' | 'suspend' | null>(null);
+  const { confirm, ConfirmationModal } = useConfirmation();
 
   const handleStatusToggle = (action: 'activate' | 'suspend') => {
-    setPendingAction(action);
-    setShowConfirmation(true);
-  };
+    const userData = {
+      name: `${user.first_name} ${user.last_name}`,
+      email: user.email
+    };
 
-  const confirmStatusChange = async () => {
-    if (!pendingAction) return;
+    const confirmAction = action === 'activate' 
+      ? confirmationActions.activateUser(userData, async () => {
+          setLoading(true);
+          try {
+            await onStatusChange(user.id, 'active');
+          } catch (error) {
+            console.error('Status change failed:', error);
+          } finally {
+            setLoading(false);
+          }
+        })
+      : confirmationActions.suspendUser(userData, async () => {
+          setLoading(true);
+          try {
+            await onStatusChange(user.id, 'suspended');
+          } catch (error) {
+            console.error('Status change failed:', error);
+          } finally {
+            setLoading(false);
+          }
+        });
 
-    setLoading(true);
-    try {
-      const newStatus = pendingAction === 'activate' ? 'active' : 'suspended';
-      await onStatusChange(user.id, newStatus);
-    } catch (error) {
-      console.error('Status change failed:', error);
-    } finally {
-      setLoading(false);
-      setShowConfirmation(false);
-      setPendingAction(null);
-    }
+    confirm(confirmAction);
   };
 
   const getStatusColor = (status: string) => {
@@ -126,20 +135,7 @@ export const UserStatusToggle: React.FC<UserStatusToggleProps> = ({
         </div>
       </div>
 
-      <ConfirmationModal
-        isOpen={showConfirmation}
-        onClose={() => setShowConfirmation(false)}
-        onConfirm={confirmStatusChange}
-        title={`${pendingAction === 'activate' ? 'Activate' : 'Suspend'} User`}
-        message={
-          pendingAction === 'activate' 
-            ? `Are you sure you want to activate ${user.first_name} ${user.last_name}? They will regain access to their account.`
-            : `Are you sure you want to suspend ${user.first_name} ${user.last_name}? They will lose access to their account until reactivated.`
-        }
-        confirmText={pendingAction === 'activate' ? 'Activate User' : 'Suspend User'}
-        confirmVariant={pendingAction === 'activate' ? 'primary' : 'danger'}
-        loading={loading}
-      />
+      {ConfirmationModal}
     </>
   );
 };

@@ -63,7 +63,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
         initial: { opacity: 0, y: 20 },
         animate: { opacity: 1, y: 0 },
         whileHover: { scale: 1.02, y: -2 },
-        transition: { duration: 0.2, ease: 'easeOut' },
+        transition: { duration: 0.2 },
         className: `glass-dark rounded-xl p-6 hover:bg-white/5 transition-all duration-300 ${className}`
       }
 

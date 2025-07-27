@@ -39,15 +39,30 @@ const mockUsers = [
   { id: 3, first_name: 'Bob', last_name: 'Johnson', email: 'bob@example.com', status: 'active' as const, created_at: '2024-03-10', last_login: '2024-07-24' }
 ];
 
-const mockKycDocuments = [
+interface KycDocument {
+  id: number;
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  document_type: 'passport' | 'drivers_license' | 'national_id' | 'utility_bill';
+  document_url: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submitted_at: string;
+  reviewed_at?: string;
+  reviewer_id?: number;
+  reviewer_name?: string;
+  comments?: string;
+}
+
+const mockKycDocuments: KycDocument[] = [
   {
     id: 1,
     user_id: 1,
     user_name: 'John Doe',
     user_email: 'john@example.com',
-    document_type: 'passport' as const,
+    document_type: 'passport',
     document_url: '/mock-document.pdf',
-    status: 'pending' as const,
+    status: 'pending',
     submitted_at: '2024-07-26T10:00:00Z'
   },
   {
@@ -55,9 +70,9 @@ const mockKycDocuments = [
     user_id: 2,
     user_name: 'Jane Smith',
     user_email: 'jane@example.com',
-    document_type: 'drivers_license' as const,
+    document_type: 'drivers_license',
     document_url: '/mock-document.pdf',
-    status: 'approved' as const,
+    status: 'approved',
     submitted_at: '2024-07-25T14:30:00Z',
     reviewed_at: '2024-07-26T09:15:00Z',
     reviewer_name: 'Admin User'
@@ -99,7 +114,7 @@ function AdminOverviewContent() {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'kyc' | 'audit'>('overview');
   const [users, setUsers] = useState(mockUsers);
-  const [kycDocuments, setKycDocuments] = useState(mockKycDocuments);
+  const [kycDocuments, setKycDocuments] = useState<KycDocument[]>(mockKycDocuments);
   const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>(mockAuditEntries);
 
   useEffect(() => {
