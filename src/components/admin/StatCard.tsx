@@ -20,6 +20,7 @@ export interface StatCardProps {
   animated?: boolean;
   loading?: boolean;
   className?: string;
+  format?: 'number' | 'currency' | 'percentage';
 }
 
 const colorVariants = {
@@ -76,7 +77,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   subtitle,
   animated = true,
   loading = false,
-  className = ''
+  className = '',
+  format = 'number'
 }) => {
   const colorScheme = colorVariants[color];
   
@@ -178,7 +180,7 @@ export const StatCard: React.FC<StatCardProps> = ({
               {animated && typeof value === 'number' ? (
                 <AnimatedNumber 
                   value={value} 
-                  format={typeof value === 'number' && value > 1000 ? 'number' : 'currency'}
+                  format={format}
                   duration={1.5}
                 />
               ) : (

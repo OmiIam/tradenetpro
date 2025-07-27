@@ -1,19 +1,106 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { Users, CreditCard, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ArrowUpRight, ArrowDownRight, Activity, DollarSign } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { 
+  Users, 
+  CreditCard, 
+  ShieldCheck, 
+  TrendingUp, 
+  AlertTriangle, 
+  CheckCircle, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Activity, 
+  DollarSign,
+  Plus,
+  UserCheck,
+  FileCheck,
+  Shield,
+  Settings
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import StatCard from '@/components/admin/StatCard';
+import BalanceAdjustmentModal from '@/components/admin/BalanceAdjustmentModal';
+import UserStatusToggle from '@/components/admin/UserStatusToggle';
+import KycVerificationPanel from '@/components/admin/KycVerificationPanel';
+import AuditLog from '@/components/admin/AuditLog';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { SkeletonCard } from '@/components/ui/SkeletonLoader';
+
+// Mock data - replace with actual API calls
+const mockUsers = [
+  { id: 1, first_name: 'John', last_name: 'Doe', email: 'john@example.com', status: 'active' as const, created_at: '2024-01-15', last_login: '2024-07-26' },
+  { id: 2, first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com', status: 'suspended' as const, created_at: '2024-02-20', last_login: '2024-07-25' },
+  { id: 3, first_name: 'Bob', last_name: 'Johnson', email: 'bob@example.com', status: 'active' as const, created_at: '2024-03-10', last_login: '2024-07-24' }
+];
+
+const mockKycDocuments = [
+  {
+    id: 1,
+    user_id: 1,
+    user_name: 'John Doe',
+    user_email: 'john@example.com',
+    document_type: 'passport' as const,
+    document_url: '/mock-document.pdf',
+    status: 'pending' as const,
+    submitted_at: '2024-07-26T10:00:00Z'
+  },
+  {
+    id: 2,
+    user_id: 2,
+    user_name: 'Jane Smith',
+    user_email: 'jane@example.com',
+    document_type: 'drivers_license' as const,
+    document_url: '/mock-document.pdf',
+    status: 'approved' as const,
+    submitted_at: '2024-07-25T14:30:00Z',
+    reviewed_at: '2024-07-26T09:15:00Z',
+    reviewer_name: 'Admin User'
+  }
+];
+
+const mockAuditEntries = [
+  {
+    id: 1,
+    action_type: 'balance_adjustment' as const,
+    admin_id: 1,
+    admin_name: 'Admin User',
+    target_user_id: 1,
+    target_user_name: 'John Doe',
+    target_user_email: 'john@example.com',
+    details: { amount: 1000, adjustment_type: 'add' as const, reason: 'Welcome bonus' },
+    timestamp: '2024-07-26T15:30:00Z',
+    ip_address: '192.168.1.1'
+  },
+  {
+    id: 2,
+    action_type: 'user_suspension' as const,
+    admin_id: 1,
+    admin_name: 'Admin User',
+    target_user_id: 2,
+    target_user_name: 'Jane Smith',
+    target_user_email: 'jane@example.com',
+    details: { previous_status: 'active', new_status: 'suspended' },
+    timestamp: '2024-07-26T14:15:00Z',
+    ip_address: '192.168.1.1'
+  }
+];
 
 function AdminOverviewContent() {
   const { state, fetchStats, fetchUsers, fetchTransactions, fetchKycDocuments } = useAdmin();
   const { stats, loading, errors } = state;
+  
+  // Local state for admin features
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'kyc' | 'audit'>('overview');
+  const [users, setUsers] = useState(mockUsers);
+  const [kycDocuments, setKycDocuments] = useState(mockKycDocuments);
+  const [auditEntries, setAuditEntries] = useState(mockAuditEntries);
 
   useEffect(() => {
     // Fetch initial data
@@ -22,6 +109,113 @@ function AdminOverviewContent() {
     fetchTransactions(1);
     fetchKycDocuments(1);
   }, [fetchStats, fetchUsers, fetchTransactions, fetchKycDocuments]);
+
+  // Admin action handlers
+  const handleBalanceAdjustment = async (userId: number, amount: number, type: 'add' | 'subtract', reason: string) => {
+    try {
+      // Mock API call - replace with actual implementation
+      console.log('Adjusting balance:', { userId, amount, type, reason });
+      
+      // Add to audit log
+      const newAuditEntry = {
+        id: auditEntries.length + 1,
+        action_type: 'balance_adjustment' as const,
+        admin_id: 1,
+        admin_name: 'Current Admin',
+        target_user_id: userId,
+        target_user_name: users.find(u => u.id === userId)?.first_name + ' ' + users.find(u => u.id === userId)?.last_name || 'Unknown User',
+        target_user_email: users.find(u => u.id === userId)?.email || '',
+        details: { amount, adjustment_type: type, reason },
+        timestamp: new Date().toISOString(),
+        ip_address: '192.168.1.1'
+      };
+      
+      setAuditEntries(prev => [newAuditEntry, ...prev]);
+      
+      // You would typically call the actual API here:
+      // await api.post('/api/admin/adjust-balance', { userId, amount, type, reason });
+      
+    } catch (error) {
+      console.error('Balance adjustment failed:', error);
+      throw error;
+    }
+  };
+
+  const handleUserStatusChange = async (userId: number, newStatus: 'active' | 'suspended') => {
+    try {
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+
+      // Update user status
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      
+      // Add to audit log
+      const newAuditEntry = {
+        id: auditEntries.length + 1,
+        action_type: (newStatus === 'active' ? 'user_activation' : 'user_suspension') as const,
+        admin_id: 1,
+        admin_name: 'Current Admin',
+        target_user_id: userId,
+        target_user_name: user.first_name + ' ' + user.last_name,
+        target_user_email: user.email,
+        details: { previous_status: user.status, new_status: newStatus },
+        timestamp: new Date().toISOString(),
+        ip_address: '192.168.1.1'
+      };
+      
+      setAuditEntries(prev => [newAuditEntry, ...prev]);
+
+      // You would typically call the actual API here:
+      // await api.patch(`/api/admin/users/${userId}/status`, { status: newStatus });
+      
+    } catch (error) {
+      console.error('Status change failed:', error);
+      throw error;
+    }
+  };
+
+  const handleKycVerification = async (documentId: number, status: 'approved' | 'rejected', comments: string) => {
+    try {
+      const document = kycDocuments.find(d => d.id === documentId);
+      if (!document) return;
+
+      // Update document status
+      setKycDocuments(prev => prev.map(d => 
+        d.id === documentId 
+          ? { 
+              ...d, 
+              status, 
+              reviewed_at: new Date().toISOString(),
+              reviewer_name: 'Current Admin',
+              comments 
+            } 
+          : d
+      ));
+      
+      // Add to audit log
+      const newAuditEntry = {
+        id: auditEntries.length + 1,
+        action_type: (status === 'approved' ? 'kyc_approval' : 'kyc_rejection') as const,
+        admin_id: 1,
+        admin_name: 'Current Admin',
+        target_user_id: document.user_id,
+        target_user_name: document.user_name,
+        target_user_email: document.user_email,
+        details: { document_type: document.document_type, comments },
+        timestamp: new Date().toISOString(),
+        ip_address: '192.168.1.1'
+      };
+      
+      setAuditEntries(prev => [newAuditEntry, ...prev]);
+
+      // You would typically call the actual API here:
+      // await api.patch(`/api/admin/kyc/${documentId}/verify`, { status, comments });
+      
+    } catch (error) {
+      console.error('KYC verification failed:', error);
+      throw error;
+    }
+  };
 
   if (loading.stats) {
     return (
@@ -101,18 +295,23 @@ function AdminOverviewContent() {
   const userGrowth = calculateGrowth(stats.activeUsers, Math.max(1, stats.totalUsers - stats.activeUsers));
   const transactionGrowth = calculateGrowth(stats.totalTransactions, Math.max(1, stats.totalTransactions - 100));
 
-  return (
-    <div className="space-y-10">
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-3"
-      >
-        <h1 className="text-4xl font-bold text-white tracking-tight">Admin Overview</h1>
-        <p className="text-lg text-slate-400">Monitor platform performance and user activity</p>
-      </motion.div>
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return renderOverviewTab();
+      case 'users':
+        return renderUsersTab();
+      case 'kyc':
+        return renderKycTab();
+      case 'audit':
+        return renderAuditTab();
+      default:
+        return renderOverviewTab();
+    }
+  };
 
+  const renderOverviewTab = () => (
+    <>
       {/* Enhanced Key Metrics */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -131,6 +330,7 @@ function AdminOverviewContent() {
             icon={Users}
             color="blue"
             subtitle="Registered users"
+            format="number"
           />
 
           <StatCard
@@ -144,6 +344,7 @@ function AdminOverviewContent() {
             icon={Activity}
             color="green"
             subtitle="Currently active"
+            format="number"
           />
 
           <StatCard
@@ -157,12 +358,13 @@ function AdminOverviewContent() {
             icon={CreditCard}
             color="purple"
             subtitle="All transactions"
+            format="number"
           />
 
           <StatCard
             title="Volume"
             value={typeof stats.transactionVolume === 'number' 
-              ? `$${stats.transactionVolume.toLocaleString()}` 
+              ? stats.transactionVolume
               : stats.transactionVolume}
             delta={{
               value: 12.5,
@@ -172,15 +374,67 @@ function AdminOverviewContent() {
             icon={DollarSign}
             color="amber"
             subtitle="Total value"
+            format="currency"
           />
         </ResponsiveGrid>
       </motion.div>
 
-      {/* System Status & Quick Actions */}
+      {/* Quick Actions */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Button
+                onClick={() => setShowBalanceModal(true)}
+                className="h-20 flex flex-col items-center justify-center space-y-2"
+              >
+                <Plus className="w-6 h-6" />
+                <span>Adjust Balance</span>
+              </Button>
+              
+              <Button
+                onClick={() => setActiveTab('users')}
+                variant="secondary"
+                className="h-20 flex flex-col items-center justify-center space-y-2"
+              >
+                <UserCheck className="w-6 h-6" />
+                <span>Manage Users</span>
+              </Button>
+              
+              <Button
+                onClick={() => setActiveTab('kyc')}
+                variant="secondary"
+                className="h-20 flex flex-col items-center justify-center space-y-2"
+              >
+                <FileCheck className="w-6 h-6" />
+                <span>Review KYC</span>
+              </Button>
+              
+              <Button
+                onClick={() => setActiveTab('audit')}
+                variant="secondary"
+                className="h-20 flex flex-col items-center justify-center space-y-2"
+              >
+                <Shield className="w-6 h-6" />
+                <span>Audit Log</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* System Status & Recent Activity - keeping existing code */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
       >
         <ResponsiveGrid cols={{ base: 1, lg: 2 }} gap="xl">
           {/* Enhanced System Health */}
@@ -226,149 +480,144 @@ function AdminOverviewContent() {
             </Card>
           </motion.div>
 
-          {/* Enhanced Quick Actions */}
-          <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
-            <Card className="border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl text-white">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => window.location.href = '/admin/users'}
-                    className="group relative p-5 bg-gradient-to-br from-blue-600/80 to-blue-700/80 hover:from-blue-500/90 hover:to-blue-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
-                    <Users className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
-                    <div className="relative z-10">
-                      <div className="text-white font-semibold mb-1">Manage Users</div>
-                      <div className="text-blue-100 text-sm opacity-90">{stats.totalUsers.toLocaleString()} total</div>
+          {/* Recent Activity - keeping existing code */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent User Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {state.users.slice(0, 5).map((user) => (
+                  <div key={user.id} className="flex items-center justify-between py-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold">
+                          {user.first_name[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{user.first_name} {user.last_name}</p>
+                        <p className="text-gray-400 text-sm">{user.email}</p>
+                      </div>
                     </div>
-                  </motion.button>
-                  
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => window.location.href = '/admin/transactions'}
-                    className="group relative p-5 bg-gradient-to-br from-green-600/80 to-green-700/80 hover:from-green-500/90 hover:to-green-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
-                    <CreditCard className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
-                    <div className="relative z-10">
-                      <div className="text-white font-semibold mb-1">Transactions</div>
-                      <div className="text-green-100 text-sm opacity-90">{stats.totalTransactions.toLocaleString()} total</div>
-                    </div>
-                  </motion.button>
-                  
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => window.location.href = '/admin/kyc'}
-                    className="group relative p-5 bg-gradient-to-br from-amber-600/80 to-amber-700/80 hover:from-amber-500/90 hover:to-amber-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
-                    <ShieldCheck className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
-                    <div className="relative z-10">
-                      <div className="text-white font-semibold mb-1">KYC Review</div>
-                      <div className="text-amber-100 text-sm opacity-90">{stats.pendingKyc} pending</div>
-                    </div>
-                  </motion.button>
-                  
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => window.location.href = '/admin/analytics'}
-                    className="group relative p-5 bg-gradient-to-br from-purple-600/80 to-purple-700/80 hover:from-purple-500/90 hover:to-purple-600/90 rounded-xl transition-all duration-300 text-left overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
-                    <TrendingUp className="w-7 h-7 text-white mb-3 group-hover:scale-110 transition-transform duration-200" />
-                    <div className="relative z-10">
-                      <div className="text-white font-semibold mb-1">Analytics</div>
-                      <div className="text-purple-100 text-sm opacity-90">View reports</div>
-                    </div>
-                  </motion.button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      user.status === 'active' ? 'bg-green-900/20 text-green-400' :
+                      user.status === 'inactive' ? 'bg-gray-900/20 text-gray-400' :
+                      'bg-red-900/20 text-red-400'
+                    }`}>
+                      {user.status}
+                    </span>
+                  </div>
+                ))}
+                
+                {state.users.length === 0 && (
+                  <p className="text-gray-400 text-center py-4">No users to display</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </ResponsiveGrid>
       </motion.div>
+    </>
+  );
 
-      {/* Recent Activity */}
-      <ResponsiveGrid cols={{ base: 1, lg: 2 }} gap="lg">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent User Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {state.users.slice(0, 5).map((user) => (
-                <div key={user.id} className="flex items-center justify-between py-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">
-                        {user.first_name[0]}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">{user.first_name} {user.last_name}</p>
-                      <p className="text-gray-400 text-sm">{user.email}</p>
-                    </div>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    user.status === 'active' ? 'bg-green-900/20 text-green-400' :
-                    user.status === 'inactive' ? 'bg-gray-900/20 text-gray-400' :
-                    'bg-red-900/20 text-red-400'
-                  }`}>
-                    {user.status}
-                  </span>
-                </div>
-              ))}
-              
-              {state.users.length === 0 && (
-                <p className="text-gray-400 text-center py-4">No users to display</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+  const renderUsersTab = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>User Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {users.map((user) => (
+              <UserStatusToggle
+                key={user.id}
+                user={user}
+                onStatusChange={handleUserStatusChange}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {state.transactions.slice(0, 5).map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between py-2">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      transaction.status === 'completed' ? 'bg-green-500' :
-                      transaction.status === 'pending' ? 'bg-yellow-500' :
-                      transaction.status === 'failed' ? 'bg-red-500' : 'bg-gray-500'
-                    }`} />
-                    <div>
-                      <p className="text-white font-medium capitalize">{transaction.type}</p>
-                      <p className="text-gray-400 text-sm">{transaction.currency}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white font-medium">${transaction.amount.toFixed(2)}</p>
-                    <p className="text-gray-400 text-sm capitalize">{transaction.status}</p>
-                  </div>
-                </div>
-              ))}
-              
-              {state.transactions.length === 0 && (
-                <p className="text-gray-400 text-center py-4">No transactions to display</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </ResponsiveGrid>
+  const renderKycTab = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <KycVerificationPanel
+        documents={kycDocuments}
+        onVerifyDocument={handleKycVerification}
+      />
+    </motion.div>
+  );
+
+  const renderAuditTab = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <AuditLog entries={auditEntries} />
+    </motion.div>
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Header with Tabs */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-6"
+      >
+        <div className="space-y-3">
+          <h1 className="text-4xl font-bold text-white tracking-tight">Admin Dashboard</h1>
+          <p className="text-lg text-slate-400">Monitor platform performance and manage users</p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="border-b border-slate-700">
+          <nav className="flex space-x-8">
+            {[
+              { id: 'overview', label: 'Overview', icon: TrendingUp },
+              { id: 'users', label: 'Users', icon: Users },
+              { id: 'kyc', label: 'KYC', icon: FileCheck },
+              { id: 'audit', label: 'Audit Log', icon: Shield }
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id as any)}
+                className={`flex items-center space-x-2 py-4 px-1 border-b-2 transition-colors ${
+                  activeTab === id
+                    ? 'border-blue-500 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-white hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="font-medium">{label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </motion.div>
+
+      {/* Tab Content */}
+      {renderTabContent()}
+
+      {/* Balance Adjustment Modal */}
+      <BalanceAdjustmentModal
+        isOpen={showBalanceModal}
+        onClose={() => setShowBalanceModal(false)}
+        onAdjustBalance={handleBalanceAdjustment}
+      />
     </div>
   );
+
 }
 
 export default function AdminPage() {

@@ -1,0 +1,147 @@
+'use client';
+
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Shield, ShieldOff, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import ConfirmationModal from '@/components/ui/ConfirmationModal';
+
+interface User {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  status: 'active' | 'suspended' | 'inactive';
+  created_at: string;
+  last_login?: string;
+}
+
+interface UserStatusToggleProps {
+  user: User;
+  onStatusChange: (userId: number, newStatus: 'active' | 'suspended') => Promise<void>;
+}
+
+export const UserStatusToggle: React.FC<UserStatusToggleProps> = ({
+  user,
+  onStatusChange
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'activate' | 'suspend' | null>(null);
+
+  const handleStatusToggle = (action: 'activate' | 'suspend') => {
+    setPendingAction(action);
+    setShowConfirmation(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!pendingAction) return;
+
+    setLoading(true);
+    try {
+      const newStatus = pendingAction === 'activate' ? 'active' : 'suspended';
+      await onStatusChange(user.id, newStatus);
+    } catch (error) {
+      console.error('Status change failed:', error);
+    } finally {
+      setLoading(false);
+      setShowConfirmation(false);
+      setPendingAction(null);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'text-green-400 bg-green-400/10 border-green-400/20';
+      case 'suspended':
+        return 'text-red-400 bg-red-400/10 border-red-400/20';
+      case 'inactive':
+        return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
+      default:
+        return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'suspended':
+        return <XCircle className="w-4 h-4" />;
+      case 'inactive':
+        return <AlertTriangle className="w-4 h-4" />;
+      default:
+        return <AlertTriangle className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+            <span className="text-white font-semibold text-lg">
+              {user.first_name[0]}{user.last_name[0]}
+            </span>
+          </div>
+          
+          <div>
+            <h3 className="text-white font-semibold">{user.first_name} {user.last_name}</h3>
+            <p className="text-gray-400 text-sm">{user.email}</p>
+            <p className="text-gray-500 text-xs">
+              Joined {new Date(user.created_at).toLocaleDateString()}
+              {user.last_login && ` • Last login ${new Date(user.last_login).toLocaleDateString()}`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(user.status)}`}>
+            {getStatusIcon(user.status)}
+            <span className="capitalize">{user.status}</span>
+          </span>
+
+          {user.status === 'active' ? (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => handleStatusToggle('suspend')}
+              disabled={loading}
+            >
+              <ShieldOff className="w-4 h-4 mr-1" />
+              Suspend
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleStatusToggle('activate')}
+              disabled={loading}
+            >
+              <Shield className="w-4 h-4 mr-1" />
+              Activate
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <ConfirmationModal
+        isOpen={showConfirmation}
+        onClose={() => setShowConfirmation(false)}
+        onConfirm={confirmStatusChange}
+        title={`${pendingAction === 'activate' ? 'Activate' : 'Suspend'} User`}
+        message={
+          pendingAction === 'activate' 
+            ? `Are you sure you want to activate ${user.first_name} ${user.last_name}? They will regain access to their account.`
+            : `Are you sure you want to suspend ${user.first_name} ${user.last_name}? They will lose access to their account until reactivated.`
+        }
+        confirmText={pendingAction === 'activate' ? 'Activate User' : 'Suspend User'}
+        confirmVariant={pendingAction === 'activate' ? 'primary' : 'danger'}
+        loading={loading}
+      />
+    </>
+  );
+};
+
+export default UserStatusToggle;
