@@ -68,18 +68,36 @@ export function useUserDashboard() {
       return
     }
 
+    // Check if user is authenticated before making API call
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        setError('Authentication required. Please login to access your dashboard.')
+        setLoading(false)
+        return
+      }
+    }
+
     try {
       setLoading(true)
       const response = await api.get('/api/user/dashboard')
       
+      console.log('API Response:', response)
+      
       // Handle both flat and nested response structures
+      // The API client wraps responses, so the actual data is in response.data
       const responseData = response.data as any
+      
+      if (!responseData) {
+        throw new Error('No data received from API')
+      }
+      
       let dashboardData: DashboardData
       if (responseData.portfolio) {
-        // Expected nested structure
+        // Expected nested structure: { portfolio: {...}, positions: [...], recentTransactions: [...] }
         dashboardData = responseData as DashboardData
       } else {
-        // Flat structure - transform it to expected format
+        // Flat structure: { totalBalance: 5000, portfolioValue: 0, ... }
         dashboardData = {
           portfolio: {
             totalBalance: responseData.totalBalance || 0,
@@ -94,11 +112,17 @@ export function useUserDashboard() {
         }
       }
       
+      console.log('Processed Dashboard Data:', dashboardData)
       setDashboardData(dashboardData)
       setError(null)
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err)
-      setError(err.response?.data?.error || 'Failed to fetch dashboard data')
+      console.error('Error details:', {
+        message: err.message,
+        status: err.status,
+        response: err.response
+      })
+      setError(err.message || 'Failed to fetch dashboard data')
     } finally {
       setLoading(false)
     }
