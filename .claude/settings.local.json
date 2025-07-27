@@ -8,7 +8,10 @@
       "Bash(npm install:*)",
       "Bash(timeout 60 npm run build)",
       "Bash(gtimeout:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(lsof:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
