@@ -95,7 +95,7 @@ export function useUserDashboard() {
       
       // Handle both flat and nested response structures
       // The API client wraps responses, so the actual data might be in response.data or response directly
-      let responseData = response.data || response
+      const responseData = (response.data || response) as any
       
       console.log('Response data:', responseData)
       
