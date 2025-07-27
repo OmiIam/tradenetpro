@@ -90,9 +90,14 @@ function AdminOverviewContent() {
     try {
       setDataErrors({});
       
-      // Fetch admin metadata first
-      const metadata = await adminApi.getAdminMetadata();
-      setAdminMetadata(metadata);
+      // Try to fetch admin metadata first - if this fails, we might not have proper permissions
+      try {
+        const metadata = await adminApi.getAdminMetadata();
+        setAdminMetadata(metadata);
+      } catch (metadataError) {
+        console.warn('Failed to fetch admin metadata:', metadataError);
+        // Don't set error state for metadata failures to avoid blocking other functionality
+      }
       
       // Fetch all data in parallel
       const [usersResponse, kycResponse, auditResponse] = await Promise.allSettled([
@@ -109,30 +114,73 @@ function AdminOverviewContent() {
           total_balance: (user as any).total_balance || 0 // Handle optional balance field
         }));
         setUsers(transformedUsers);
+        // Clear users error if successful
+        setDataErrors(prev => {
+          const { users, ...rest } = prev;
+          return rest;
+        });
       } else {
-        console.error('Failed to fetch users:', usersResponse.reason);
-        setDataErrors(prev => ({ ...prev, users: 'Failed to load users' }));
+        // Check if it's a permission error and handle silently
+        const error = usersResponse.reason;
+        if (error?.message?.includes('permission') || error?.status === 403) {
+          console.warn('No permission to access users data');
+          setDataErrors(prev => ({ ...prev, users: 'No permission to view users' }));
+        } else if (error?.status === 404) {
+          console.warn('Users endpoint not found');
+          setDataErrors(prev => ({ ...prev, users: 'Users endpoint not available' }));
+        } else {
+          console.error('Failed to fetch users:', error);
+          setDataErrors(prev => ({ ...prev, users: 'Failed to load users' }));
+        }
       }
       
       // Handle KYC documents
       if (kycResponse.status === 'fulfilled') {
         setKycDocuments(kycResponse.value.documents);
+        // Clear KYC error if successful
+        setDataErrors(prev => {
+          const { kyc, ...rest } = prev;
+          return rest;
+        });
       } else {
-        console.error('Failed to fetch KYC documents:', kycResponse.reason);
-        setDataErrors(prev => ({ ...prev, kyc: 'Failed to load KYC documents' }));
+        const error = kycResponse.reason;
+        if (error?.message?.includes('permission') || error?.status === 403) {
+          console.warn('No permission to access KYC data');
+          setDataErrors(prev => ({ ...prev, kyc: 'No permission to view KYC documents' }));
+        } else if (error?.status === 404) {
+          console.warn('KYC endpoint not found');
+          setDataErrors(prev => ({ ...prev, kyc: 'KYC endpoint not available' }));
+        } else {
+          console.error('Failed to fetch KYC documents:', error);
+          setDataErrors(prev => ({ ...prev, kyc: 'Failed to load KYC documents' }));
+        }
       }
       
       // Handle audit logs
       if (auditResponse.status === 'fulfilled') {
         setAuditEntries(auditResponse.value.logs);
+        // Clear audit error if successful
+        setDataErrors(prev => {
+          const { audit, ...rest } = prev;
+          return rest;
+        });
       } else {
-        console.error('Failed to fetch audit logs:', auditResponse.reason);
-        setDataErrors(prev => ({ ...prev, audit: 'Failed to load audit logs' }));
+        const error = auditResponse.reason;
+        if (error?.message?.includes('permission') || error?.status === 403) {
+          console.warn('No permission to access audit logs');
+          setDataErrors(prev => ({ ...prev, audit: 'No permission to view audit logs' }));
+        } else if (error?.status === 404) {
+          console.warn('Audit logs endpoint not found');
+          setDataErrors(prev => ({ ...prev, audit: 'Audit logs endpoint not available' }));
+        } else {
+          console.error('Failed to fetch audit logs:', error);
+          setDataErrors(prev => ({ ...prev, audit: 'Failed to load audit logs' }));
+        }
       }
       
     } catch (error) {
-      console.error('Failed to sync admin data:', error);
-      setDataErrors(prev => ({ ...prev, general: 'Failed to sync data' }));
+      // Only log general errors, don't show notifications for them
+      console.warn('Admin data sync encountered issues:', error);
     } finally {
       setIsLoadingData(false);
     }
@@ -145,7 +193,7 @@ function AdminOverviewContent() {
       interval: 30000, // 30 seconds
       immediate: true,
       syncOnFocus: true,
-      notifications: true,
+      notifications: false, // Disable notifications to prevent spam
       maxFailures: 3
     }
   );
@@ -325,76 +373,83 @@ function AdminOverviewContent() {
     }
   };
 
-  const renderOverviewTab = () => (
-    <>
-      {/* Enhanced Key Metrics */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="lg">
-          <StatCard
-            title="Total Users"
-            value={stats.totalUsers}
-            delta={{
-              value: userGrowth.value,
-              isPositive: userGrowth.isPositive,
-              label: `Active: ${stats.activeUsers.toLocaleString()}`
-            }}
-            icon={Users}
-            color="blue"
-            subtitle="Registered users"
-            format="number"
-          />
+  const renderOverviewTab = () => {
+    // Calculate real stats from fetched data
+    const realStats = {
+      totalUsers: users.length,
+      activeUsers: users.filter(user => user.status === 'active').length,
+      suspendedUsers: users.filter(user => user.status === 'suspended').length,
+      totalBalance: users.reduce((sum, user) => sum + (user.total_balance || 0), 0)
+    };
+    
+    return (
+      <>
+        {/* Enhanced Key Metrics */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="lg">
+            <StatCard
+              title="Total Users"
+              value={realStats.totalUsers}
+              delta={{
+                value: realStats.totalUsers > 0 ? (realStats.activeUsers / realStats.totalUsers) * 100 : 0,
+                isPositive: true,
+                label: `Active: ${realStats.activeUsers.toLocaleString()}`
+              }}
+              icon={Users}
+              color="blue"
+              subtitle="Registered users"
+              format="number"
+            />
 
-          <StatCard
-            title="Active Users"
-            value={stats.activeUsers}
-            delta={{
-              value: stats.totalUsers > 0 ? (stats.activeUsers / stats.totalUsers) * 100 : 0,
-              isPositive: true,
-              label: "Engagement rate"
-            }}
-            icon={Activity}
-            color="green"
-            subtitle="Currently active"
-            format="number"
-          />
+            <StatCard
+              title="Active Users"
+              value={realStats.activeUsers}
+              delta={{
+                value: realStats.totalUsers > 0 ? (realStats.activeUsers / realStats.totalUsers) * 100 : 0,
+                isPositive: true,
+                label: "Engagement rate"
+              }}
+              icon={Activity}
+              color="green"
+              subtitle="Currently active"
+              format="number"
+            />
 
-          <StatCard
-            title="Transactions"
-            value={stats.totalTransactions}
-            delta={{
-              value: transactionGrowth.value,
-              isPositive: transactionGrowth.isPositive,
-              label: "Total processed"
-            }}
-            icon={CreditCard}
-            color="purple"
-            subtitle="All transactions"
-            format="number"
-          />
+            <StatCard
+              title="Transactions"
+              value={stats.totalTransactions || 0}
+              delta={{
+                value: transactionGrowth.value,
+                isPositive: transactionGrowth.isPositive,
+                label: "Total processed"
+              }}
+              icon={CreditCard}
+              color="purple"
+              subtitle="All transactions"
+              format="number"
+            />
 
-          <StatCard
-            title="Volume"
-            value={typeof stats.transactionVolume === 'number' 
-              ? stats.transactionVolume
-              : stats.transactionVolume}
-            delta={{
-              value: 12.5,
-              isPositive: true,
-              label: "Transaction volume"
-            }}
-            icon={DollarSign}
-            color="amber"
-            subtitle="Total value"
-            format="currency"
-          />
-        </ResponsiveGrid>
-      </motion.div>
+            <StatCard
+              title="Total Balance"
+              value={realStats.totalBalance}
+              delta={{
+                value: 12.5,
+                isPositive: true,
+                label: "User balances"
+              }}
+              icon={DollarSign}
+              color="amber"
+              subtitle="Combined user funds"
+              format="currency"
+            />
+          </ResponsiveGrid>
+        </motion.div>
 
-      {/* Quick Actions */}
+        {/* Quick Actions */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -478,7 +533,7 @@ function AdminOverviewContent() {
                   
                   <div className="space-y-2">
                     <span className="text-sm text-slate-400 font-medium">Pending KYC</span>
-                    <p className="text-lg font-semibold text-white">{stats.pendingKyc}</p>
+                    <p className="text-lg font-semibold text-white">{kycDocuments.filter(doc => doc.status === 'pending').length}</p>
                   </div>
                   
                   <div className="space-y-2">
@@ -554,8 +609,9 @@ function AdminOverviewContent() {
           </Card>
         </ResponsiveGrid>
       </motion.div>
-    </>
-  );
+      </>
+    );
+  };
 
   const renderUsersTab = () => {
     if (dataErrors.users) {
