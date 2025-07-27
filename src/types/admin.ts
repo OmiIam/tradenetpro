@@ -80,3 +80,38 @@ export interface PortfolioPosition {
   averagePrice: number;
   action: 'add' | 'update' | 'remove';
 }
+
+export interface KYCDocument {
+  id: string;
+  userId: string;
+  user_email: string;
+  first_name: string;
+  last_name: string;
+  document_type: 'passport' | 'drivers_license' | 'national_id' | 'utility_bill' | 'bank_statement';
+  file_name: string;
+  file_size: number;
+  verification_status: 'pending' | 'approved' | 'rejected' | 'under_review';
+  rejection_reason?: string;
+  uploaded_at: Date;
+  verified_at?: Date;
+  verified_by?: string;
+  verified_by_name?: string;
+  verified_by_last_name?: string;
+  kyc_status: 'pending' | 'approved' | 'rejected' | 'under_review';
+}
+
+export interface KYCStats {
+  documents: {
+    by_status: Record<string, number>;
+    pending_review: number;
+    processed_today: number;
+  };
+  users: {
+    by_kyc_status: Record<string, number>;
+  };
+}
+
+export interface KYCVerificationRequest {
+  status: 'approved' | 'rejected';
+  comments?: string;
+}

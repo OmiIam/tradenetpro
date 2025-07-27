@@ -17,8 +17,8 @@ export default function KYCPage() {
         const response = await api.get('/api/user/kyc/status');
         const responseData = response.data || response;
         
-        setDocuments(responseData.documents || []);
-        setKycStatus(responseData.status || 'pending');
+        setDocuments((responseData as any)?.documents || []);
+        setKycStatus((responseData as any)?.status || 'pending');
       } catch (error) {
         console.error('Error fetching KYC data:', error);
         // Use fallback data

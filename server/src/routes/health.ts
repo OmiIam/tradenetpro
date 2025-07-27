@@ -131,7 +131,7 @@ async function checkDatabase() {
     const db = database.getDatabase();
     
     // Simple query to test database connectivity
-    const result = db.prepare('SELECT 1 as test').get();
+    const result = db.prepare('SELECT 1 as test').get() as any;
     const responseTime = Math.round(performance.now() - startTime);
     
     if (result && result.test === 1) {
@@ -234,14 +234,14 @@ router.get('/admin/system-status', async (req: Request, res: Response) => {
     // Get system statistics
     const stats = {
       users: {
-        total: db.prepare('SELECT COUNT(*) as count FROM users').get()?.count || 0,
-        active: db.prepare('SELECT COUNT(*) as count FROM users WHERE status = ?').get('active')?.count || 0,
-        lastHour: db.prepare('SELECT COUNT(*) as count FROM users WHERE created_at > datetime("now", "-1 hour")').get()?.count || 0
+        total: (db.prepare('SELECT COUNT(*) as count FROM users').get() as any)?.count || 0,
+        active: (db.prepare('SELECT COUNT(*) as count FROM users WHERE status = ?').get('active') as any)?.count || 0,
+        lastHour: (db.prepare('SELECT COUNT(*) as count FROM users WHERE created_at > datetime("now", "-1 hour")').get() as any)?.count || 0
       },
       transactions: {
-        total: db.prepare('SELECT COUNT(*) as count FROM transactions').get()?.count || 0,
-        today: db.prepare('SELECT COUNT(*) as count FROM transactions WHERE date(created_at) = date("now")').get()?.count || 0,
-        lastHour: db.prepare('SELECT COUNT(*) as count FROM transactions WHERE created_at > datetime("now", "-1 hour")').get()?.count || 0
+        total: (db.prepare('SELECT COUNT(*) as count FROM transactions').get() as any)?.count || 0,
+        today: (db.prepare('SELECT COUNT(*) as count FROM transactions WHERE date(created_at) = date("now")').get() as any)?.count || 0,
+        lastHour: (db.prepare('SELECT COUNT(*) as count FROM transactions WHERE created_at > datetime("now", "-1 hour")').get() as any)?.count || 0
       },
       system: {
         uptime: process.uptime(),

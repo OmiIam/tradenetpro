@@ -75,6 +75,10 @@ export class UserModel {
     this.db = database;
   }
 
+  getDatabase(): Database.Database {
+    return this.db;
+  }
+
   async createUser(userData: CreateUserData): Promise<User> {
     console.log('UserModel.createUser called with:', userData);
     

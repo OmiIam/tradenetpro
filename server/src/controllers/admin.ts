@@ -423,6 +423,273 @@ export class AdminController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  // KYC Management
+  async getAllKYCDocuments(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const status = req.query.status as string;
+
+      const db = this.userModel.getDatabase();
+      let query = `
+        SELECT 
+          ud.*,
+          u.email as user_email,
+          u.first_name,
+          u.last_name,
+          u.kyc_status
+        FROM user_documents ud
+        JOIN users u ON ud.user_id = u.id
+      `;
+
+      const params: any[] = [];
+      if (status && ['pending', 'approved', 'rejected', 'under_review'].includes(status)) {
+        query += ' WHERE ud.verification_status = ?';
+        params.push(status);
+      }
+
+      query += ' ORDER BY ud.uploaded_at DESC LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      const documents = db.prepare(query).all(...params);
+
+      // Get total count
+      let countQuery = 'SELECT COUNT(*) as total FROM user_documents ud';
+      const countParams: any[] = [];
+      if (status && ['pending', 'approved', 'rejected', 'under_review'].includes(status)) {
+        countQuery += ' WHERE verification_status = ?';
+        countParams.push(status);
+      }
+
+      const totalResult = db.prepare(countQuery).get(...countParams) as { total: number };
+
+      res.json({
+        documents,
+        pagination: {
+          total: totalResult.total,
+          limit,
+          offset,
+          hasMore: offset + limit < totalResult.total
+        }
+      });
+    } catch (error) {
+      console.error('Get all KYC documents error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  async getKYCDocumentById(req: Request, res: Response): Promise<void> {
+    try {
+      const documentId = parseInt(req.params.documentId);
+      const db = this.userModel.getDatabase();
+
+      const document = db.prepare(`
+        SELECT 
+          ud.*,
+          u.email as user_email,
+          u.first_name,
+          u.last_name,
+          u.kyc_status,
+          admin.first_name as verified_by_name,
+          admin.last_name as verified_by_last_name
+        FROM user_documents ud
+        JOIN users u ON ud.user_id = u.id
+        LEFT JOIN users admin ON ud.verified_by = admin.id
+        WHERE ud.id = ?
+      `).get(documentId);
+
+      if (!document) {
+        res.status(404).json({ error: 'Document not found' });
+        return;
+      }
+
+      res.json({ document });
+    } catch (error) {
+      console.error('Get KYC document error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  async verifyKYCDocument(req: Request, res: Response): Promise<void> {
+    try {
+      const documentId = parseInt(req.params.documentId);
+      const { status, comments } = req.body;
+      const adminId = req.user!.userId;
+      const db = this.userModel.getDatabase();
+
+      if (!['approved', 'rejected'].includes(status)) {
+        res.status(400).json({ error: 'Invalid status. Must be "approved" or "rejected"' });
+        return;
+      }
+
+      // Update document status
+      const updateDoc = db.prepare(`
+        UPDATE user_documents 
+        SET verification_status = ?, rejection_reason = ?, verified_at = CURRENT_TIMESTAMP, verified_by = ?
+        WHERE id = ?
+      `);
+
+      const result = updateDoc.run(
+        status,
+        status === 'rejected' ? comments : null,
+        adminId,
+        documentId
+      );
+
+      if (result.changes === 0) {
+        res.status(404).json({ error: 'Document not found' });
+        return;
+      }
+
+      // Get document info to update user KYC status
+      const document = db.prepare(`
+        SELECT user_id, document_type FROM user_documents WHERE id = ?
+      `).get(documentId) as { user_id: number; document_type: string };
+
+      if (document) {
+        // Check if user has all required documents approved
+        const requiredDocs = ['passport', 'utility_bill'];
+        const approvedDocs = db.prepare(`
+          SELECT document_type FROM user_documents 
+          WHERE user_id = ? AND verification_status = 'approved'
+        `).all(document.user_id) as { document_type: string }[];
+
+        const approvedTypes = approvedDocs.map(doc => doc.document_type);
+        const hasAllRequired = requiredDocs.every(type => approvedTypes.includes(type));
+
+        // Update user KYC status
+        let newKycStatus = 'under_review';
+        if (hasAllRequired) {
+          newKycStatus = 'approved';
+        } else {
+          // Check if any required documents are rejected
+          const rejectedDocs = db.prepare(`
+            SELECT document_type FROM user_documents 
+            WHERE user_id = ? AND verification_status = 'rejected' AND document_type IN (${requiredDocs.map(() => '?').join(',')})
+          `).all(document.user_id, ...requiredDocs) as { document_type: string }[];
+
+          if (rejectedDocs.length > 0) {
+            newKycStatus = 'rejected';
+          }
+        }
+
+        db.prepare(`
+          UPDATE users SET kyc_status = ? WHERE id = ?
+        `).run(newKycStatus, document.user_id);
+
+        // Create audit log
+        db.prepare(`
+          INSERT INTO audit_logs (user_id, action, details, admin_id) 
+          VALUES (?, ?, ?, ?)
+        `).run(
+          document.user_id,
+          `kyc_document_${status}`,
+          JSON.stringify({
+            document_id: documentId,
+            document_type: document.document_type,
+            new_kyc_status: newKycStatus,
+            comments: comments || null
+          }),
+          adminId
+        );
+      }
+
+      res.json({
+        message: `Document ${status} successfully`,
+        document_id: documentId,
+        status
+      });
+    } catch (error) {
+      console.error('Verify KYC document error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  async getKYCStats(req: Request, res: Response): Promise<void> {
+    try {
+      const db = this.userModel.getDatabase();
+
+      // Get KYC document statistics
+      const docStats = db.prepare(`
+        SELECT 
+          verification_status,
+          COUNT(*) as count
+        FROM user_documents
+        GROUP BY verification_status
+      `).all() as { verification_status: string; count: number }[];
+
+      // Get user KYC status statistics
+      const userStats = db.prepare(`
+        SELECT 
+          kyc_status,
+          COUNT(*) as count
+        FROM users
+        GROUP BY kyc_status
+      `).all() as { kyc_status: string; count: number }[];
+
+      // Get recent documents needing review
+      const pendingCount = db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM user_documents 
+        WHERE verification_status = 'pending'
+      `).get() as { count: number };
+
+      // Get documents processed today
+      const todayProcessed = db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM user_documents 
+        WHERE DATE(verified_at) = DATE('now') AND verification_status IN ('approved', 'rejected')
+      `).get() as { count: number };
+
+      res.json({
+        documents: {
+          by_status: docStats.reduce((acc, stat) => {
+            acc[stat.verification_status] = stat.count;
+            return acc;
+          }, {} as Record<string, number>),
+          pending_review: pendingCount.count,
+          processed_today: todayProcessed.count
+        },
+        users: {
+          by_kyc_status: userStats.reduce((acc, stat) => {
+            acc[stat.kyc_status] = stat.count;
+            return acc;
+          }, {} as Record<string, number>)
+        }
+      });
+    } catch (error) {
+      console.error('Get KYC stats error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  async downloadKYCDocument(req: Request, res: Response): Promise<void> {
+    try {
+      const documentId = parseInt(req.params.documentId);
+      const db = this.userModel.getDatabase();
+
+      const document = db.prepare(`
+        SELECT file_path, file_name FROM user_documents WHERE id = ?
+      `).get(documentId) as { file_path: string; file_name: string };
+
+      if (!document) {
+        res.status(404).json({ error: 'Document not found' });
+        return;
+      }
+
+      const fs = require('fs');
+      if (!fs.existsSync(document.file_path)) {
+        res.status(404).json({ error: 'File not found on server' });
+        return;
+      }
+
+      res.download(document.file_path, document.file_name);
+    } catch (error) {
+      console.error('Download KYC document error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }
 
 export default AdminController;

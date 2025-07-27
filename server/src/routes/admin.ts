@@ -66,7 +66,12 @@ export default function createAdminRoutes(database: DatabaseManager) {
       'GET /api/admin/users/:userId/transactions',
       'POST /api/admin/users/:userId/transactions',
       'GET /api/admin/transactions',
-      'GET /api/admin/portfolios'
+      'GET /api/admin/portfolios',
+      'GET /api/admin/kyc/stats',
+      'GET /api/admin/kyc/documents',
+      'GET /api/admin/kyc/documents/:documentId',
+      'POST /api/admin/kyc/documents/:documentId/verify',
+      'GET /api/admin/kyc/documents/:documentId/download'
     ];
     
     res.json({
@@ -139,6 +144,27 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.getAllPortfolios(req, res);
   });
 
-  console.log(`[ADMIN] Admin routes registered successfully, including /users-with-portfolios`);
+  // KYC Management Routes
+  router.get('/kyc/stats', async (req: express.Request, res: express.Response) => {
+    await adminController.getKYCStats(req, res);
+  });
+
+  router.get('/kyc/documents', validatePagination, async (req: express.Request, res: express.Response) => {
+    await adminController.getAllKYCDocuments(req, res);
+  });
+
+  router.get('/kyc/documents/:documentId', async (req: express.Request, res: express.Response) => {
+    await adminController.getKYCDocumentById(req, res);
+  });
+
+  router.post('/kyc/documents/:documentId/verify', async (req: express.Request, res: express.Response) => {
+    await adminController.verifyKYCDocument(req, res);
+  });
+
+  router.get('/kyc/documents/:documentId/download', async (req: express.Request, res: express.Response) => {
+    await adminController.downloadKYCDocument(req, res);
+  });
+
+  console.log(`[ADMIN] Admin routes registered successfully, including KYC management and /users-with-portfolios`);
   return router;
 }

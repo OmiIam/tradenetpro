@@ -4,18 +4,20 @@ import fs from 'fs';
 import bcrypt from 'bcryptjs';
 
 export class DatabaseManager {
+  private static instance: DatabaseManager;
   private db: Database.Database;
+  private dbPath: string;
 
   constructor() {
-    const dbPath = process.env.DB_PATH || './database/trading_platform.db';
-    const dbDir = path.dirname(dbPath);
+    this.dbPath = process.env.DB_PATH || './database/trading_platform.db';
+    const dbDir = path.dirname(this.dbPath);
     
     // Create database directory if it doesn't exist
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
 
-    this.db = new Database(dbPath);
+    this.db = new Database(this.dbPath);
     this.initializeDatabase();
   }
 
@@ -367,8 +369,19 @@ export class DatabaseManager {
     }
   }
 
+  public static getInstance(): DatabaseManager {
+    if (!DatabaseManager.instance) {
+      DatabaseManager.instance = new DatabaseManager();
+    }
+    return DatabaseManager.instance;
+  }
+
   public getDatabase(): Database.Database {
     return this.db;
+  }
+
+  public getDatabasePath(): string {
+    return this.dbPath;
   }
 
   public close() {

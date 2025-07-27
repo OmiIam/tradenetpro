@@ -33,7 +33,7 @@ export default function PortfolioPage() {
         setTransactionsLoading(true);
         const response = await api.get('/api/user/transactions');
         const responseData = response.data || response;
-        setTransactions(responseData.transactions || []);
+        setTransactions((responseData as any)?.transactions || []);
         setError(null);
       } catch (err: any) {
         console.error('Error fetching transactions:', err);

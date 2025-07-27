@@ -126,7 +126,7 @@ export default function createKYCRoutes(database: Database.Database) {
       // Get the created document
       const document = db.prepare(`
         SELECT * FROM user_documents WHERE id = ?
-      `).get(result.lastInsertRowid);
+      `).get(result.lastInsertRowid) as any;
 
       console.log(`KYC document uploaded: User ${userId}, Type: ${document_type}, File: ${file.originalname}`);
 
