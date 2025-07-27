@@ -56,8 +56,23 @@ export interface BackendAdminStats {
   };
 }
 
+// Admin metadata interface
+export interface AdminMetadata {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  ip_address?: string;
+}
+
 // Admin API functions
 export const adminApi = {
+  // Get current admin metadata
+  async getAdminMetadata(): Promise<AdminMetadata> {
+    const response = await apiClient.get<AdminMetadata>('/api/admin/me');
+    return response.data || response as AdminMetadata;
+  },
+
   // Dashboard stats
   async getStats(): Promise<BackendAdminStats> {
     const response = await apiClient.get<BackendAdminStats>('/api/admin/stats');
@@ -114,9 +129,101 @@ export const adminApi = {
   },
 
   // Search users for balance adjustment
-  async searchUsers(query: string, limit: number = 10): Promise<(BackendUser & { current_balance?: number; total_balance?: number })[]> {
-    const response = await apiClient.get<{ users: (BackendUser & { current_balance?: number; total_balance?: number })[] }>(`/api/admin/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-    return (response.data?.users || response as any)?.users || [];
+  async searchUsers(query: string, limit: number = 10): Promise<(BackendUser & { total_balance?: number })[]> {
+    const response = await apiClient.get<{ users: (BackendUser & { total_balance?: number })[] }>(`/api/admin/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    
+    // Normalize balance field to total_balance
+    const users = (response.data?.users || response as any)?.users || [];
+    return users.map((user: any) => ({
+      ...user,
+      total_balance: user.total_balance || user.current_balance || 0
+    }));
+  },
+
+  // Get real users (replace mock data)
+  async getRealUsers(page: number = 1, limit: number = 10, filters: Record<string, any> = {}): Promise<{ users: BackendUser[], total: number }> {
+    const offset = (page - 1) * limit;
+    const params = new URLSearchParams({
+      offset: offset.toString(),
+      limit: limit.toString(),
+      ...filters
+    });
+    
+    const response = await apiClient.get<{ users: BackendUser[], pagination: { total: number } }>(`/api/admin/users?${params}`);
+    
+    if (response.data) {
+      return {
+        users: response.data.users,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      const directResponse = response as any;
+      return {
+        users: directResponse.users || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
+  },
+
+  // Get KYC documents (replace mock data)
+  async getKycDocuments(page: number = 1, limit: number = 10, filters: Record<string, any> = {}): Promise<{ documents: any[], total: number }> {
+    const offset = (page - 1) * limit;
+    const params = new URLSearchParams({
+      offset: offset.toString(),
+      limit: limit.toString(),
+      ...filters
+    });
+    
+    const response = await apiClient.get<{ documents: any[], pagination: { total: number } }>(`/api/admin/kyc?${params}`);
+    
+    if (response.data) {
+      return {
+        documents: response.data.documents,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      const directResponse = response as any;
+      return {
+        documents: directResponse.documents || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
+  },
+
+  // Get audit logs (replace mock data)
+  async getAuditLogs(page: number = 1, limit: number = 20, filters: Record<string, any> = {}): Promise<{ logs: any[], total: number }> {
+    const offset = (page - 1) * limit;
+    const params = new URLSearchParams({
+      offset: offset.toString(),
+      limit: limit.toString(),
+      ...filters
+    });
+    
+    const response = await apiClient.get<{ logs: any[], pagination: { total: number } }>(`/api/admin/audit-logs?${params}`);
+    
+    if (response.data) {
+      return {
+        logs: response.data.logs,
+        total: response.data.pagination?.total || 0
+      };
+    } else {
+      const directResponse = response as any;
+      return {
+        logs: directResponse.logs || [],
+        total: directResponse.pagination?.total || 0
+      };
+    }
+  },
+
+  // Create audit log entry
+  async createAuditLog(entry: {
+    action_type: string;
+    target_user_id: number;
+    target_user_name: string;
+    target_user_email: string;
+    details: Record<string, any>;
+  }): Promise<void> {
+    await apiClient.post('/api/admin/audit-logs', entry);
   },
 
   async updateUser(userId: number, userData: Partial<BackendUser>): Promise<BackendUser> {

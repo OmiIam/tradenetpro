@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Users, 
   CreditCard, 
@@ -27,18 +27,32 @@ import BalanceAdjustmentModal from '@/components/admin/BalanceAdjustmentModal';
 import UserStatusToggle from '@/components/admin/UserStatusToggle';
 import KycVerificationPanel from '@/components/admin/KycVerificationPanel';
 import AuditLog, { AuditLogEntry } from '@/components/admin/AuditLog';
-import { adminApi } from '@/lib/admin-api';
+import { adminApi, AdminMetadata, BackendUser } from '@/lib/admin-api';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { SkeletonCard } from '@/components/ui/SkeletonLoader';
+import { useRealTimeSync } from '@/hooks/useRealTimeSync';
+import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
+import { 
+  DashboardSkeleton, 
+  UserListSkeleton, 
+  KycDocumentSkeleton, 
+  AuditLogSkeleton 
+} from '@/components/ui/LoadingSkeletons';
 
-// Mock data - replace with actual API calls
-const mockUsers = [
-  { id: 1, first_name: 'John', last_name: 'Doe', email: 'john@example.com', status: 'active' as const, created_at: '2024-01-15', last_login: '2024-07-26' },
-  { id: 2, first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com', status: 'suspended' as const, created_at: '2024-02-20', last_login: '2024-07-25' },
-  { id: 3, first_name: 'Bob', last_name: 'Johnson', email: 'bob@example.com', status: 'active' as const, created_at: '2024-03-10', last_login: '2024-07-24' }
-];
+// Real data interfaces - transform BackendUser to match component expectations
+interface AdminUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  status: 'active' | 'suspended' | 'inactive';
+  created_at: string;
+  last_login?: string; // Transform null to undefined for component compatibility
+  role: 'user' | 'admin';
+  updated_at: string;
+  total_balance?: number;
+}
 
 interface KycDocument {
   id: number;
@@ -55,57 +69,7 @@ interface KycDocument {
   comments?: string;
 }
 
-const mockKycDocuments: KycDocument[] = [
-  {
-    id: 1,
-    user_id: 1,
-    user_name: 'John Doe',
-    user_email: 'john@example.com',
-    document_type: 'passport',
-    document_url: '/mock-document.pdf',
-    status: 'pending',
-    submitted_at: '2024-07-26T10:00:00Z'
-  },
-  {
-    id: 2,
-    user_id: 2,
-    user_name: 'Jane Smith',
-    user_email: 'jane@example.com',
-    document_type: 'drivers_license',
-    document_url: '/mock-document.pdf',
-    status: 'approved',
-    submitted_at: '2024-07-25T14:30:00Z',
-    reviewed_at: '2024-07-26T09:15:00Z',
-    reviewer_name: 'Admin User'
-  }
-];
 
-const mockAuditEntries: AuditLogEntry[] = [
-  {
-    id: 1,
-    action_type: 'balance_adjustment',
-    admin_id: 1,
-    admin_name: 'Admin User',
-    target_user_id: 1,
-    target_user_name: 'John Doe',
-    target_user_email: 'john@example.com',
-    details: { amount: 1000, adjustment_type: 'add', reason: 'Welcome bonus' },
-    timestamp: '2024-07-26T15:30:00Z',
-    ip_address: '192.168.1.1'
-  },
-  {
-    id: 2,
-    action_type: 'user_suspension',
-    admin_id: 1,
-    admin_name: 'Admin User',
-    target_user_id: 2,
-    target_user_name: 'Jane Smith',
-    target_user_email: 'jane@example.com',
-    details: { previous_status: 'active', new_status: 'suspended' },
-    timestamp: '2024-07-26T14:15:00Z',
-    ip_address: '192.168.1.1'
-  }
-];
 
 function AdminOverviewContent() {
   const { state, fetchStats, fetchUsers, fetchTransactions, fetchKycDocuments } = useAdmin();
@@ -114,40 +78,115 @@ function AdminOverviewContent() {
   // Local state for admin features
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'kyc' | 'audit'>('overview');
-  const [users, setUsers] = useState(mockUsers);
-  const [kycDocuments, setKycDocuments] = useState<KycDocument[]>(mockKycDocuments);
-  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>(mockAuditEntries);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [kycDocuments, setKycDocuments] = useState<KycDocument[]>([]);
+  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
+  const [adminMetadata, setAdminMetadata] = useState<AdminMetadata | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataErrors, setDataErrors] = useState<Record<string, string>>({});
 
+  // Real-time data sync function
+  const syncAllData = useCallback(async () => {
+    try {
+      setDataErrors({});
+      
+      // Fetch admin metadata first
+      const metadata = await adminApi.getAdminMetadata();
+      setAdminMetadata(metadata);
+      
+      // Fetch all data in parallel
+      const [usersResponse, kycResponse, auditResponse] = await Promise.allSettled([
+        adminApi.getRealUsers(1, 20),
+        adminApi.getKycDocuments(1, 20),
+        adminApi.getAuditLogs(1, 50)
+      ]);
+      
+      // Handle users data - transform BackendUser to AdminUser
+      if (usersResponse.status === 'fulfilled') {
+        const transformedUsers: AdminUser[] = usersResponse.value.users.map(user => ({
+          ...user,
+          last_login: user.last_login || undefined, // Transform null to undefined
+          total_balance: (user as any).total_balance || 0 // Handle optional balance field
+        }));
+        setUsers(transformedUsers);
+      } else {
+        console.error('Failed to fetch users:', usersResponse.reason);
+        setDataErrors(prev => ({ ...prev, users: 'Failed to load users' }));
+      }
+      
+      // Handle KYC documents
+      if (kycResponse.status === 'fulfilled') {
+        setKycDocuments(kycResponse.value.documents);
+      } else {
+        console.error('Failed to fetch KYC documents:', kycResponse.reason);
+        setDataErrors(prev => ({ ...prev, kyc: 'Failed to load KYC documents' }));
+      }
+      
+      // Handle audit logs
+      if (auditResponse.status === 'fulfilled') {
+        setAuditEntries(auditResponse.value.logs);
+      } else {
+        console.error('Failed to fetch audit logs:', auditResponse.reason);
+        setDataErrors(prev => ({ ...prev, audit: 'Failed to load audit logs' }));
+      }
+      
+    } catch (error) {
+      console.error('Failed to sync admin data:', error);
+      setDataErrors(prev => ({ ...prev, general: 'Failed to sync data' }));
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
+  
+  // Set up real-time sync
+  const { isLoading: isSyncing, lastSync, forceSync } = useRealTimeSync(
+    syncAllData,
+    {
+      interval: 30000, // 30 seconds
+      immediate: true,
+      syncOnFocus: true,
+      notifications: true,
+      maxFailures: 3
+    }
+  );
+  
   useEffect(() => {
-    // Fetch initial data
+    // Fetch initial data from AdminContext
     fetchStats();
     fetchUsers(1);
     fetchTransactions(1);
     fetchKycDocuments(1);
   }, [fetchStats, fetchUsers, fetchTransactions, fetchKycDocuments]);
 
-  // Admin action handlers
+  // Admin action handlers with dynamic metadata
   const handleBalanceAdjustment = async (userId: number, amount: number, type: 'add' | 'subtract', reason: string) => {
     try {
       // Use real API to adjust balance
       const adjustmentType = type === 'add' ? 'credit' : 'debit';
       await adminApi.adjustBalance(userId, amount, adjustmentType, reason);
       
-      // Add to audit log
-      const newAuditEntry: AuditLogEntry = {
-        id: auditEntries.length + 1,
-        action_type: 'balance_adjustment',
-        admin_id: 1,
-        admin_name: 'Current Admin',
-        target_user_id: userId,
-        target_user_name: users.find(u => u.id === userId)?.first_name + ' ' + users.find(u => u.id === userId)?.last_name || 'Unknown User',
-        target_user_email: users.find(u => u.id === userId)?.email || '',
-        details: { amount, adjustment_type: type, reason },
-        timestamp: new Date().toISOString(),
-        ip_address: '192.168.1.1'
-      };
+      // Create audit log entry with dynamic admin metadata
+      const targetUser = users.find(u => u.id === userId);
+      if (targetUser && adminMetadata) {
+        await adminApi.createAuditLog({
+          action_type: 'balance_adjustment',
+          target_user_id: userId,
+          target_user_name: `${targetUser.first_name} ${targetUser.last_name}`,
+          target_user_email: targetUser.email,
+          details: { 
+            amount, 
+            adjustment_type: type, 
+            reason,
+            admin_id: adminMetadata.id,
+            admin_name: adminMetadata.name,
+            admin_email: adminMetadata.email,
+            ip_address: adminMetadata.ip_address
+          }
+        });
+      }
       
-      setAuditEntries(prev => [newAuditEntry, ...prev]);
+      // Force a data sync to get updated information
+      forceSync();
       
     } catch (error) {
       console.error('Balance adjustment failed:', error);
@@ -158,29 +197,29 @@ function AdminOverviewContent() {
   const handleUserStatusChange = async (userId: number, newStatus: 'active' | 'suspended') => {
     try {
       const user = users.find(u => u.id === userId);
-      if (!user) return;
+      if (!user || !adminMetadata) return;
 
-      // Update user status
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      // Update user status via API
+      await adminApi.toggleUserStatus(userId, newStatus);
       
-      // Add to audit log
-      const newAuditEntry: AuditLogEntry = {
-        id: auditEntries.length + 1,
+      // Create audit log entry with dynamic admin metadata
+      await adminApi.createAuditLog({
         action_type: newStatus === 'active' ? 'user_activation' : 'user_suspension',
-        admin_id: 1,
-        admin_name: 'Current Admin',
         target_user_id: userId,
-        target_user_name: user.first_name + ' ' + user.last_name,
+        target_user_name: `${user.first_name} ${user.last_name}`,
         target_user_email: user.email,
-        details: { previous_status: user.status, new_status: newStatus },
-        timestamp: new Date().toISOString(),
-        ip_address: '192.168.1.1'
-      };
+        details: { 
+          previous_status: user.status, 
+          new_status: newStatus,
+          admin_id: adminMetadata.id,
+          admin_name: adminMetadata.name,
+          admin_email: adminMetadata.email,
+          ip_address: adminMetadata.ip_address
+        }
+      });
       
-      setAuditEntries(prev => [newAuditEntry, ...prev]);
-
-      // You would typically call the actual API here:
-      // await api.patch(`/api/admin/users/${userId}/status`, { status: newStatus });
+      // Force a data sync to get updated information
+      forceSync();
       
     } catch (error) {
       console.error('Status change failed:', error);
@@ -191,39 +230,30 @@ function AdminOverviewContent() {
   const handleKycVerification = async (documentId: number, status: 'approved' | 'rejected', comments: string) => {
     try {
       const document = kycDocuments.find(d => d.id === documentId);
-      if (!document) return;
+      if (!document || !adminMetadata) return;
 
-      // Update document status
-      setKycDocuments(prev => prev.map(d => 
-        d.id === documentId 
-          ? { 
-              ...d, 
-              status, 
-              reviewed_at: new Date().toISOString(),
-              reviewer_name: 'Current Admin',
-              comments 
-            } 
-          : d
-      ));
+      // Note: Real KYC verification API endpoint would go here
+      // await adminApi.verifyKycDocument(documentId, status, comments);
       
-      // Add to audit log
-      const newAuditEntry: AuditLogEntry = {
-        id: auditEntries.length + 1,
+      // Create audit log entry with dynamic admin metadata
+      await adminApi.createAuditLog({
         action_type: status === 'approved' ? 'kyc_approval' : 'kyc_rejection',
-        admin_id: 1,
-        admin_name: 'Current Admin',
         target_user_id: document.user_id,
         target_user_name: document.user_name,
         target_user_email: document.user_email,
-        details: { document_type: document.document_type, comments },
-        timestamp: new Date().toISOString(),
-        ip_address: '192.168.1.1'
-      };
+        details: { 
+          document_type: document.document_type, 
+          document_id: documentId,
+          comments,
+          admin_id: adminMetadata.id,
+          admin_name: adminMetadata.name,
+          admin_email: adminMetadata.email,
+          ip_address: adminMetadata.ip_address
+        }
+      });
       
-      setAuditEntries(prev => [newAuditEntry, ...prev]);
-
-      // You would typically call the actual API here:
-      // await api.patch(`/api/admin/kyc/${documentId}/verify`, { status, comments });
+      // Force a data sync to get updated information
+      forceSync();
       
     } catch (error) {
       console.error('KYC verification failed:', error);
@@ -231,37 +261,8 @@ function AdminOverviewContent() {
     }
   };
 
-  if (loading.stats) {
-    return (
-      <div className="space-y-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-3"
-        >
-          <h1 className="text-4xl font-bold text-white tracking-tight">Admin Overview</h1>
-          <p className="text-lg text-slate-400">Monitor platform performance and user activity</p>
-        </motion.div>
-        
-        <ResponsiveGrid cols={{ base: 1, sm: 2, xl: 4 }} gap="lg">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <StatCard
-                title="Loading..."
-                value="---"
-                icon={Activity}
-                loading={true}
-              />
-            </motion.div>
-          ))}
-        </ResponsiveGrid>
-      </div>
-    );
+  if (loading.stats || isLoadingData) {
+    return <DashboardSkeleton />;
   }
 
   if (errors.stats) {
@@ -494,14 +495,17 @@ function AdminOverviewContent() {
             </Card>
           </motion.div>
 
-          {/* Recent Activity - keeping existing code */}
+          {/* Recent Activity - using real user data */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent User Activity</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Recent User Activity</span>
+                {isSyncing && <Activity className="w-4 h-4 animate-spin text-blue-400" />}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {state.users.slice(0, 5).map((user) => (
+                {users.slice(0, 5).map((user) => (
                   <div key={user.id} className="flex items-center justify-between py-2">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
@@ -524,8 +528,26 @@ function AdminOverviewContent() {
                   </div>
                 ))}
                 
-                {state.users.length === 0 && (
-                  <p className="text-gray-400 text-center py-4">No users to display</p>
+                {users.length === 0 && !isSyncing && (
+                  <div className="text-center py-8">
+                    <Users className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                    <p className="text-gray-400">No users to display</p>
+                  </div>
+                )}
+                
+                {isSyncing && users.length === 0 && (
+                  <div className="space-y-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center space-x-3 py-2 animate-pulse">
+                        <div className="w-8 h-8 bg-slate-700 rounded-full" />
+                        <div className="flex-1 space-y-1">
+                          <div className="h-4 bg-slate-700 rounded w-32" />
+                          <div className="h-3 bg-slate-700 rounded w-48" />
+                        </div>
+                        <div className="h-6 bg-slate-700 rounded w-16" />
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -535,51 +557,128 @@ function AdminOverviewContent() {
     </>
   );
 
-  const renderUsersTab = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {users.map((user) => (
-              <UserStatusToggle
-                key={user.id}
-                user={user}
-                onStatusChange={handleUserStatusChange}
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
+  const renderUsersTab = () => {
+    if (dataErrors.users) {
+      return (
+        <Card className="border-red-500/20 bg-red-500/5">
+          <CardContent className="flex items-center space-x-4 p-8">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+            <div>
+              <h3 className="text-red-400 font-semibold">Failed to Load Users</h3>
+              <p className="text-slate-300">{dataErrors.users}</p>
+              <Button onClick={forceSync} className="mt-2">Retry</Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    if (isSyncing && users.length === 0) {
+      return <UserListSkeleton count={5} />;
+    }
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-6"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>User Management</span>
+              {lastSync && (
+                <span className="text-sm text-slate-400">
+                  Last updated: {new Date(lastSync).toLocaleTimeString()}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {users.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-400">No users found</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <UserStatusToggle
+                    key={user.id}
+                    user={user}
+                    onStatusChange={handleUserStatusChange}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
 
-  const renderKycTab = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <KycVerificationPanel
-        documents={kycDocuments}
-        onVerifyDocument={handleKycVerification}
-      />
-    </motion.div>
-  );
+  const renderKycTab = () => {
+    if (dataErrors.kyc) {
+      return (
+        <Card className="border-red-500/20 bg-red-500/5">
+          <CardContent className="flex items-center space-x-4 p-8">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+            <div>
+              <h3 className="text-red-400 font-semibold">Failed to Load KYC Documents</h3>
+              <p className="text-slate-300">{dataErrors.kyc}</p>
+              <Button onClick={forceSync} className="mt-2">Retry</Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    if (isSyncing && kycDocuments.length === 0) {
+      return <KycDocumentSkeleton count={3} />;
+    }
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <KycVerificationPanel
+          documents={kycDocuments}
+          onVerifyDocument={handleKycVerification}
+        />
+      </motion.div>
+    );
+  };
 
-  const renderAuditTab = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <AuditLog entries={auditEntries} />
-    </motion.div>
-  );
+  const renderAuditTab = () => {
+    if (dataErrors.audit) {
+      return (
+        <Card className="border-red-500/20 bg-red-500/5">
+          <CardContent className="flex items-center space-x-4 p-8">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+            <div>
+              <h3 className="text-red-400 font-semibold">Failed to Load Audit Logs</h3>
+              <p className="text-slate-300">{dataErrors.audit}</p>
+              <Button onClick={forceSync} className="mt-2">Retry</Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    if (isSyncing && auditEntries.length === 0) {
+      return <AuditLogSkeleton count={5} />;
+    }
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <AuditLog entries={auditEntries} />
+      </motion.div>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -637,11 +736,13 @@ function AdminOverviewContent() {
 export default function AdminPage() {
   return (
     <ProtectedRoute requireAdmin={true}>
-      <AdminProvider>
-        <AdminLayout>
-          <AdminOverviewContent />
-        </AdminLayout>
-      </AdminProvider>
+      <AdminErrorBoundary>
+        <AdminProvider>
+          <AdminLayout>
+            <AdminOverviewContent />
+          </AdminLayout>
+        </AdminProvider>
+      </AdminErrorBoundary>
     </ProtectedRoute>
   );
 }

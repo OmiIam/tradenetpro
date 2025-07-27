@@ -13,8 +13,7 @@ interface User {
   first_name: string;
   last_name: string;
   email: string;
-  current_balance?: number;
-  total_balance?: number; // Support both field names from backend
+  total_balance: number; // Normalized to use total_balance everywhere
 }
 
 interface BalanceAdjustmentModalProps {
@@ -55,7 +54,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        current_balance: user.current_balance || user.total_balance || 0
+        total_balance: user.total_balance || 0 // Always use total_balance
       }));
 
       setSearchResults(transformedUsers);
@@ -151,7 +150,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                             <p className="text-white font-medium">{user.first_name} {user.last_name}</p>
                             <p className="text-gray-400 text-sm">{user.email}</p>
                           </div>
-                          <p className="text-green-400 font-medium">${(user.current_balance || 0).toLocaleString()}</p>
+                          <p className="text-green-400 font-medium">${user.total_balance.toLocaleString()}</p>
                         </div>
                       </button>
                     ))}
@@ -175,7 +174,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                   </div>
                   <div className="text-right">
                     <p className="text-gray-400 text-sm">Current Balance</p>
-                    <p className="text-green-400 font-semibold">${(selectedUser.current_balance || 0).toLocaleString()}</p>
+                    <p className="text-green-400 font-semibold">${selectedUser.total_balance.toLocaleString()}</p>
                   </div>
                 </div>
               </motion.div>
@@ -272,7 +271,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Current Balance:</span>
-                <span className="text-green-400">${(selectedUser?.current_balance || 0).toLocaleString()}</span>
+                <span className="text-green-400">${selectedUser?.total_balance.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Adjustment:</span>
@@ -284,7 +283,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                 <span className="text-gray-400">New Balance:</span>
                 <span className="text-white">
                   ${(
-                    (selectedUser?.current_balance || 0) + 
+                    (selectedUser?.total_balance || 0) + 
                     (adjustmentType === 'add' ? parseFloat(amount || '0') : -parseFloat(amount || '0'))
                   ).toLocaleString()}
                 </span>
