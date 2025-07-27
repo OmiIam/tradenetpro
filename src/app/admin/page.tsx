@@ -26,7 +26,7 @@ import StatCard from '@/components/admin/StatCard';
 import BalanceAdjustmentModal from '@/components/admin/BalanceAdjustmentModal';
 import UserStatusToggle from '@/components/admin/UserStatusToggle';
 import KycVerificationPanel from '@/components/admin/KycVerificationPanel';
-import AuditLog from '@/components/admin/AuditLog';
+import AuditLog, { AuditLogEntry } from '@/components/admin/AuditLog';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -64,22 +64,22 @@ const mockKycDocuments = [
   }
 ];
 
-const mockAuditEntries = [
+const mockAuditEntries: AuditLogEntry[] = [
   {
     id: 1,
-    action_type: 'balance_adjustment' as const,
+    action_type: 'balance_adjustment',
     admin_id: 1,
     admin_name: 'Admin User',
     target_user_id: 1,
     target_user_name: 'John Doe',
     target_user_email: 'john@example.com',
-    details: { amount: 1000, adjustment_type: 'add' as const, reason: 'Welcome bonus' },
+    details: { amount: 1000, adjustment_type: 'add', reason: 'Welcome bonus' },
     timestamp: '2024-07-26T15:30:00Z',
     ip_address: '192.168.1.1'
   },
   {
     id: 2,
-    action_type: 'user_suspension' as const,
+    action_type: 'user_suspension',
     admin_id: 1,
     admin_name: 'Admin User',
     target_user_id: 2,
@@ -100,7 +100,7 @@ function AdminOverviewContent() {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'kyc' | 'audit'>('overview');
   const [users, setUsers] = useState(mockUsers);
   const [kycDocuments, setKycDocuments] = useState(mockKycDocuments);
-  const [auditEntries, setAuditEntries] = useState(mockAuditEntries);
+  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>(mockAuditEntries);
 
   useEffect(() => {
     // Fetch initial data
@@ -117,9 +117,9 @@ function AdminOverviewContent() {
       console.log('Adjusting balance:', { userId, amount, type, reason });
       
       // Add to audit log
-      const newAuditEntry = {
+      const newAuditEntry: AuditLogEntry = {
         id: auditEntries.length + 1,
-        action_type: 'balance_adjustment' as const,
+        action_type: 'balance_adjustment',
         admin_id: 1,
         admin_name: 'Current Admin',
         target_user_id: userId,
@@ -150,9 +150,9 @@ function AdminOverviewContent() {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
       
       // Add to audit log
-      const newAuditEntry = {
+      const newAuditEntry: AuditLogEntry = {
         id: auditEntries.length + 1,
-        action_type: (newStatus === 'active' ? 'user_activation' : 'user_suspension') as const,
+        action_type: newStatus === 'active' ? 'user_activation' : 'user_suspension',
         admin_id: 1,
         admin_name: 'Current Admin',
         target_user_id: userId,
@@ -193,9 +193,9 @@ function AdminOverviewContent() {
       ));
       
       // Add to audit log
-      const newAuditEntry = {
+      const newAuditEntry: AuditLogEntry = {
         id: auditEntries.length + 1,
-        action_type: (status === 'approved' ? 'kyc_approval' : 'kyc_rejection') as const,
+        action_type: status === 'approved' ? 'kyc_approval' : 'kyc_rejection',
         admin_id: 1,
         admin_name: 'Current Admin',
         target_user_id: document.user_id,

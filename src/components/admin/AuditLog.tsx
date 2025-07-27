@@ -18,7 +18,7 @@ import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
-interface AuditLogEntry {
+export interface AuditLogEntry {
   id: number;
   action_type: 'balance_adjustment' | 'user_suspension' | 'user_activation' | 'kyc_approval' | 'kyc_rejection';
   admin_id: number;
