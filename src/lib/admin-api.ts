@@ -113,6 +113,12 @@ export const adminApi = {
     return response.data || response as BackendUser;
   },
 
+  // Search users for balance adjustment
+  async searchUsers(query: string, limit: number = 10): Promise<(BackendUser & { current_balance?: number; total_balance?: number })[]> {
+    const response = await apiClient.get<{ users: (BackendUser & { current_balance?: number; total_balance?: number })[] }>(`/api/admin/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    return (response.data?.users || response as any)?.users || [];
+  },
+
   async updateUser(userId: number, userData: Partial<BackendUser>): Promise<BackendUser> {
     const response = await apiClient.put<BackendUser>(`/api/admin/users/${userId}`, userData);
     return response.data || response as BackendUser;

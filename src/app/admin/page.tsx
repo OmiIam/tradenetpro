@@ -27,6 +27,7 @@ import BalanceAdjustmentModal from '@/components/admin/BalanceAdjustmentModal';
 import UserStatusToggle from '@/components/admin/UserStatusToggle';
 import KycVerificationPanel from '@/components/admin/KycVerificationPanel';
 import AuditLog, { AuditLogEntry } from '@/components/admin/AuditLog';
+import { adminApi } from '@/lib/admin-api';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -128,8 +129,9 @@ function AdminOverviewContent() {
   // Admin action handlers
   const handleBalanceAdjustment = async (userId: number, amount: number, type: 'add' | 'subtract', reason: string) => {
     try {
-      // Mock API call - replace with actual implementation
-      console.log('Adjusting balance:', { userId, amount, type, reason });
+      // Use real API to adjust balance
+      const adjustmentType = type === 'add' ? 'credit' : 'debit';
+      await adminApi.adjustBalance(userId, amount, adjustmentType, reason);
       
       // Add to audit log
       const newAuditEntry: AuditLogEntry = {
@@ -146,9 +148,6 @@ function AdminOverviewContent() {
       };
       
       setAuditEntries(prev => [newAuditEntry, ...prev]);
-      
-      // You would typically call the actual API here:
-      // await api.post('/api/admin/adjust-balance', { userId, amount, type, reason });
       
     } catch (error) {
       console.error('Balance adjustment failed:', error);

@@ -6,13 +6,15 @@ import { X, Search, DollarSign, Plus, Minus, AlertTriangle } from 'lucide-react'
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import { adminApi } from '@/lib/admin-api';
 
 interface User {
   id: number;
   first_name: string;
   last_name: string;
   email: string;
-  current_balance: number;
+  current_balance?: number;
+  total_balance?: number; // Support both field names from backend
 }
 
 interface BalanceAdjustmentModalProps {
@@ -44,21 +46,22 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
 
     setSearching(true);
     try {
-      // Mock search results - replace with actual API call
-      const mockUsers: User[] = [
-        { id: 1, first_name: 'John', last_name: 'Doe', email: 'john@example.com', current_balance: 5000 },
-        { id: 2, first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com', current_balance: 3500 },
-        { id: 3, first_name: 'Bob', last_name: 'Johnson', email: 'bob@example.com', current_balance: 2000 }
-      ];
+      // Use real API to search users
+      const users = await adminApi.searchUsers(query, 10);
+      
+      // Transform backend user format to component format
+      const transformedUsers: User[] = users.map(user => ({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        current_balance: user.current_balance || user.total_balance || 0
+      }));
 
-      const filtered = mockUsers.filter(user => 
-        user.email.toLowerCase().includes(query.toLowerCase()) ||
-        `${user.first_name} ${user.last_name}`.toLowerCase().includes(query.toLowerCase())
-      );
-
-      setSearchResults(filtered);
+      setSearchResults(transformedUsers);
     } catch (error) {
       console.error('Search failed:', error);
+      setSearchResults([]);
     } finally {
       setSearching(false);
     }
@@ -148,7 +151,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                             <p className="text-white font-medium">{user.first_name} {user.last_name}</p>
                             <p className="text-gray-400 text-sm">{user.email}</p>
                           </div>
-                          <p className="text-green-400 font-medium">${user.current_balance.toLocaleString()}</p>
+                          <p className="text-green-400 font-medium">${(user.current_balance || 0).toLocaleString()}</p>
                         </div>
                       </button>
                     ))}
@@ -172,7 +175,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                   </div>
                   <div className="text-right">
                     <p className="text-gray-400 text-sm">Current Balance</p>
-                    <p className="text-green-400 font-semibold">${selectedUser.current_balance.toLocaleString()}</p>
+                    <p className="text-green-400 font-semibold">${(selectedUser.current_balance || 0).toLocaleString()}</p>
                   </div>
                 </div>
               </motion.div>
@@ -269,7 +272,7 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Current Balance:</span>
-                <span className="text-green-400">${selectedUser?.current_balance.toLocaleString()}</span>
+                <span className="text-green-400">${(selectedUser?.current_balance || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Adjustment:</span>
