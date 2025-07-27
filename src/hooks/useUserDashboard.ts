@@ -73,23 +73,24 @@ export function useUserDashboard() {
       const response = await api.get('/api/user/dashboard')
       
       // Handle both flat and nested response structures
+      const responseData = response.data as any
       let dashboardData: DashboardData
-      if (response.data.portfolio) {
+      if (responseData.portfolio) {
         // Expected nested structure
-        dashboardData = response.data as DashboardData
+        dashboardData = responseData as DashboardData
       } else {
         // Flat structure - transform it to expected format
         dashboardData = {
           portfolio: {
-            totalBalance: response.data.totalBalance || 0,
-            portfolioValue: response.data.portfolioValue || 0,
-            totalTrades: response.data.totalTrades || 0,
-            winRate: response.data.winRate || 0,
-            todayPnL: response.data.todayPnL || 0,
-            totalReturn: response.data.totalReturn || 0
+            totalBalance: responseData.totalBalance || 0,
+            portfolioValue: responseData.portfolioValue || 0,
+            totalTrades: responseData.totalTrades || 0,
+            winRate: responseData.winRate || 0,
+            todayPnL: responseData.todayPnL || 0,
+            totalReturn: responseData.totalReturn || 0
           },
-          positions: response.data.positions || [],
-          recentTransactions: response.data.recentTransactions || []
+          positions: responseData.positions || [],
+          recentTransactions: responseData.recentTransactions || []
         }
       }
       
