@@ -11,7 +11,9 @@
       "Bash(npx tsc:*)",
       "Bash(lsof:*)",
       "Bash(npm run dev:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

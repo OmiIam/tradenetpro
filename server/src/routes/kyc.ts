@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -48,10 +48,20 @@ let db: Database.Database;
 export default function createKYCRoutes(database: Database.Database) {
   db = database;
 
+  // GET /api/kyc/test - Test endpoint for mobile debugging
+  router.get('/test', authenticateToken, (req, res) => {
+    res.json({
+      success: true,
+      message: 'KYC endpoint is accessible',
+      user: req.user,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // POST /api/kyc/upload - Upload KYC document
   router.post('/upload', authenticateToken, upload.single('document'), async (req, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
       const { document_type } = req.body;
       const file = req.file;
 
@@ -72,7 +82,7 @@ export default function createKYCRoutes(database: Database.Database) {
       }
 
       // Validate document type
-      const validTypes = ['passport', 'drivers_license', 'national_id', 'utility_bill', 'bank_statement'];
+      const validTypes = ['id', 'passport', 'drivers_license', 'utility_bill', 'bank_statement'];
       if (!validTypes.includes(document_type)) {
         fs.unlinkSync(file.path);
         return res.status(400).json({
@@ -165,7 +175,7 @@ export default function createKYCRoutes(database: Database.Database) {
   // GET /api/kyc/status - Get user's KYC status and documents
   router.get('/status', authenticateToken, (req, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
 
       // Get user's KYC status
       const user = db.prepare(`
@@ -200,7 +210,7 @@ export default function createKYCRoutes(database: Database.Database) {
   // GET /api/kyc/documents - Get all user documents (for admin)
   router.get('/documents', authenticateToken, (req, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
       const userRole = (req as any).user.role;
 
       if (userRole !== 'admin') {
