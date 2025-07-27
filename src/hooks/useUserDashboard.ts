@@ -80,13 +80,24 @@ export function useUserDashboard() {
 
     try {
       setLoading(true)
+      setError(null)
+      
+      console.log('Making API call to:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/user/dashboard`)
+      console.log('Access token:', localStorage.getItem('accessToken') ? 'Present' : 'Missing')
+      
       const response = await api.get('/api/user/dashboard')
       
-      console.log('API Response:', response)
+      console.log('Raw API Response:', response)
+      
+      if (!response) {
+        throw new Error('API returned no response')
+      }
       
       // Handle both flat and nested response structures
-      // The API client wraps responses, so the actual data is in response.data
-      const responseData = response.data as any
+      // The API client wraps responses, so the actual data might be in response.data or response directly
+      let responseData = response.data || response
+      
+      console.log('Response data:', responseData)
       
       if (!responseData) {
         throw new Error('No data received from API')
@@ -117,12 +128,29 @@ export function useUserDashboard() {
       setError(null)
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err)
-      console.error('Error details:', {
-        message: err.message,
-        status: err.status,
-        response: err.response
-      })
-      setError(err.message || 'Failed to fetch dashboard data')
+      
+      let errorMessage = 'Failed to fetch dashboard data'
+      
+      if (err.message) {
+        errorMessage = err.message
+      } else if (typeof err === 'string') {
+        errorMessage = err
+      }
+      
+      // Check for specific error types
+      if (errorMessage.includes('Authentication') || errorMessage.includes('401') || errorMessage.includes('403')) {
+        errorMessage = 'Authentication required. Please login to access your dashboard.'
+        // Clear potentially invalid tokens
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+        }
+      } else if (errorMessage.includes('fetch')) {
+        errorMessage = 'Unable to connect to server. Please check your internet connection.'
+      }
+      
+      console.error('Final error message:', errorMessage)
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

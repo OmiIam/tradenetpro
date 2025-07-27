@@ -68,15 +68,30 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeader(),
-      },
+    const url = `${this.baseURL}${endpoint}`;
+    console.log('Making GET request to:', url);
+    console.log('Headers:', {
+      'Content-Type': 'application/json',
+      ...this.getAuthHeader(),
     });
 
-    return this.handleResponse<T>(response);
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeader(),
+        },
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
+      return this.handleResponse<T>(response);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
