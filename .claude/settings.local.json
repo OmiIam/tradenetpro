@@ -5,7 +5,10 @@
       "Bash(npm start)",
       "Bash(find:*)",
       "Bash(sqlite3:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(timeout 60 npm run build)",
+      "Bash(gtimeout:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

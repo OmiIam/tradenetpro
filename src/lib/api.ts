@@ -94,14 +94,22 @@ class ApiClient {
     }
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: any, config?: { headers?: Record<string, string> }): Promise<ApiResponse<T>> {
+    const isFormData = data instanceof FormData;
+    const headers: Record<string, string> = {
+      ...this.getAuthHeader(),
+      ...config?.headers,
+    };
+
+    // Don't set Content-Type for FormData, let browser set it with boundary
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeader(),
-      },
-      body: data ? JSON.stringify(data) : undefined,
+      headers,
+      body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
     });
 
     return this.handleResponse<T>(response);

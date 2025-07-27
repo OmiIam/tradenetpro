@@ -195,16 +195,16 @@ export function useMarketData() {
       // Transform the response to match our expected format
       const responseData = response.data || response
       
-      if (responseData && responseData.data) {
+      if (responseData && (responseData as any).data) {
         const transformedData: MarketData = {
-          stocks: responseData.data.stocks?.map((stock: any) => ({
+          stocks: (responseData as any).data.stocks?.map((stock: any) => ({
             symbol: stock.symbol,
             name: stock.name,
             price: stock.current_price,
             change: stock.price_change_24h,
             changePercent: stock.price_change_percentage_24h
           })) || [],
-          crypto: responseData.data.crypto?.map((crypto: any) => ({
+          crypto: (responseData as any).data.crypto?.map((crypto: any) => ({
             symbol: crypto.symbol,
             name: crypto.name,
             price: crypto.current_price,

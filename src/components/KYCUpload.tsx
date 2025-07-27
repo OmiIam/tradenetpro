@@ -168,25 +168,21 @@ export const KYCUpload: React.FC<KYCUploadProps> = ({
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      const response = await api.post('/api/user/kyc/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.post('/api/user/kyc/upload', formData);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
 
       const responseData = response.data || response;
       
-      if (responseData.success) {
+      if ((responseData as any).success) {
         setSuccess('Document uploaded successfully! It will be reviewed within 24-48 hours.');
         setPreviewFile(null);
         setPreviewUrl(null);
         setSelectedType('');
         
-        if (onUploadComplete && responseData.document) {
-          onUploadComplete(responseData.document);
+        if (onUploadComplete && (responseData as any).document) {
+          onUploadComplete((responseData as any).document);
         }
         
         // Reset form after 3 seconds
@@ -195,7 +191,7 @@ export const KYCUpload: React.FC<KYCUploadProps> = ({
           setUploadProgress(0);
         }, 3000);
       } else {
-        throw new Error(responseData.error || 'Upload failed');
+        throw new Error((responseData as any).error || 'Upload failed');
       }
     } catch (err: any) {
       console.error('Upload error:', err);
