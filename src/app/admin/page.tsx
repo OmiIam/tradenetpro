@@ -84,6 +84,7 @@ function AdminOverviewContent() {
   
   // Local state for admin features
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'kyc' | 'audit' | 'transactions' | 'settings'>('overview');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [kycDocuments, setKycDocuments] = useState<KycDocument[]>([]);
@@ -374,6 +375,16 @@ function AdminOverviewContent() {
       console.error('KYC verification failed:', error);
       throw error;
     }
+  };
+
+  const handleBalanceAdjustmentOpen = (userId: number) => {
+    setSelectedUserId(userId);
+    setShowBalanceModal(true);
+  };
+
+  const handleBalanceModalClose = () => {
+    setShowBalanceModal(false);
+    setSelectedUserId(null);
   };
 
   if (loading.stats || isLoadingData) {
@@ -751,6 +762,35 @@ function AdminOverviewContent() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6"
       >
+        {/* Quick Actions for User Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <DollarSign className="w-5 h-5 text-green-400" />
+              <span>Quick Actions</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => setShowBalanceModal(true)}
+                className="bg-green-600/20 border-green-500/30 text-green-400 hover:bg-green-600/30 hover:border-green-500/50"
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Adjust User Balance
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => forceSync()}
+                disabled={isSyncing}
+              >
+                <Activity className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -775,6 +815,7 @@ function AdminOverviewContent() {
                     key={user.id}
                     user={user}
                     onStatusChange={handleUserStatusChange}
+                    onBalanceAdjustment={handleBalanceAdjustmentOpen}
                   />
                 ))}
               </div>
@@ -1141,7 +1182,7 @@ function AdminOverviewContent() {
       {/* Balance Adjustment Modal */}
       <BalanceAdjustmentModal
         isOpen={showBalanceModal}
-        onClose={() => setShowBalanceModal(false)}
+        onClose={handleBalanceModalClose}
         onAdjustBalance={handleBalanceAdjustment}
         availableUsers={users.map(user => {
           const balance = user.total_balance || 0;

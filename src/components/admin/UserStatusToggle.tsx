@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, ShieldOff, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Shield, ShieldOff, CheckCircle, XCircle, AlertTriangle, DollarSign, Plus, Minus } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useConfirmation, confirmationActions } from '@/components/ui/ConfirmationModal';
 
@@ -14,16 +14,19 @@ interface User {
   status: 'active' | 'suspended' | 'inactive';
   created_at: string;
   last_login?: string;
+  total_balance?: number;
 }
 
 interface UserStatusToggleProps {
   user: User;
   onStatusChange: (userId: number, newStatus: 'active' | 'suspended') => Promise<void>;
+  onBalanceAdjustment?: (userId: number) => void;
 }
 
 export const UserStatusToggle: React.FC<UserStatusToggleProps> = ({
   user,
-  onStatusChange
+  onStatusChange,
+  onBalanceAdjustment
 }) => {
   const [loading, setLoading] = useState(false);
   const { confirm, ConfirmationModal } = useConfirmation();
@@ -98,10 +101,20 @@ export const UserStatusToggle: React.FC<UserStatusToggleProps> = ({
           <div>
             <h3 className="text-white font-semibold">{user.first_name} {user.last_name}</h3>
             <p className="text-gray-400 text-sm">{user.email}</p>
-            <p className="text-gray-500 text-xs">
-              Joined {new Date(user.created_at).toLocaleDateString()}
-              {user.last_login && ` • Last login ${new Date(user.last_login).toLocaleDateString()}`}
-            </p>
+            <div className="flex items-center space-x-3 mt-1">
+              <p className="text-gray-500 text-xs">
+                Joined {new Date(user.created_at).toLocaleDateString()}
+                {user.last_login && ` • Last login ${new Date(user.last_login).toLocaleDateString()}`}
+              </p>
+              {user.total_balance !== undefined && (
+                <div className="flex items-center space-x-1">
+                  <DollarSign className="w-3 h-3 text-green-400" />
+                  <span className="text-green-400 text-xs font-medium">
+                    ${user.total_balance.toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -110,6 +123,20 @@ export const UserStatusToggle: React.FC<UserStatusToggleProps> = ({
             {getStatusIcon(user.status)}
             <span className="capitalize">{user.status}</span>
           </span>
+
+          {/* Balance Adjustment Button */}
+          {onBalanceAdjustment && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onBalanceAdjustment(user.id)}
+              disabled={loading}
+              className="bg-green-600/20 border-green-500/30 text-green-400 hover:bg-green-600/30 hover:border-green-500/50"
+            >
+              <DollarSign className="w-4 h-4 mr-1" />
+              Adjust Balance
+            </Button>
+          )}
 
           {user.status === 'active' ? (
             <Button
