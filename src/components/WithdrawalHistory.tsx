@@ -45,7 +45,7 @@ const WithdrawalHistory: React.FC<WithdrawalHistoryProps> = ({ className = '' })
       setError(null);
       
       const response = await api.get('/api/user/withdrawal');
-      const responseData = response.data || response;
+      const responseData: any = response.data || response;
       
       if (responseData.success) {
         setWithdrawals(responseData.data || []);

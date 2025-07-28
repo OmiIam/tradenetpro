@@ -15,9 +15,11 @@ import { SkeletonCard, SkeletonChart } from '@/components/ui/SkeletonLoader'
 import { useMobile } from '@/components/layout/ResponsiveContainer'
 import { useUserDashboard, useMarketData } from '@/hooks/useUserDashboard'
 import { DollarSign, TrendingUp, Activity, PieChart, Loader2, AlertCircle, BarChart3, Wallet, Bell } from 'lucide-react'
+import WithdrawalModal, { WithdrawalRequestData } from '@/components/WithdrawalModal'
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = React.useState('overview')
+  const [showWithdrawalModal, setShowWithdrawalModal] = React.useState(false)
   const isMobile = useMobile()
   
   // Fetch real data from backend
@@ -54,6 +56,19 @@ export default function Dashboard() {
     { id: 'markets', label: 'Markets', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'insights', label: 'AI Insights', icon: <Activity className="w-4 h-4" /> }
   ]
+
+  // Handle withdrawal request
+  const handleWithdrawalRequest = async (data: WithdrawalRequestData) => {
+    try {
+      // TODO: Implement actual API call to submit withdrawal request
+      console.log('Withdrawal request submitted:', data)
+      // This would typically make an API call to your backend
+      // await api.submitWithdrawalRequest(data)
+    } catch (error) {
+      console.error('Failed to submit withdrawal request:', error)
+      throw error
+    }
+  }
 
   // Loading state
   if (dashboardLoading || marketLoading) {
