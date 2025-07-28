@@ -16,7 +16,13 @@ import {
   UserCheck,
   FileCheck,
   Shield,
-  Settings
+  Settings,
+  Database,
+  Server,
+  Lock,
+  Bell,
+  Mail,
+  Globe
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -33,6 +39,7 @@ import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useRealTimeSync } from '@/hooks/useRealTimeSync';
 import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary';
+import toast from 'react-hot-toast';
 import { 
   DashboardSkeleton, 
   UserListSkeleton, 
@@ -77,7 +84,7 @@ function AdminOverviewContent() {
   
   // Local state for admin features
   const [showBalanceModal, setShowBalanceModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'kyc' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'kyc' | 'audit' | 'transactions' | 'settings'>('overview');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [kycDocuments, setKycDocuments] = useState<KycDocument[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
@@ -424,10 +431,14 @@ function AdminOverviewContent() {
         return renderOverviewTab();
       case 'users':
         return renderUsersTab();
+      case 'transactions':
+        return renderTransactionsTab();
       case 'kyc':
         return renderKycTab();
       case 'audit':
         return renderAuditTab();
+      case 'settings':
+        return renderSettingsTab();
       default:
         return renderOverviewTab();
     }
@@ -521,40 +532,81 @@ function AdminOverviewContent() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button
-                onClick={() => setShowBalanceModal(true)}
-                className="h-20 flex flex-col items-center justify-center space-y-2"
+              <motion.div
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
               >
-                <Plus className="w-6 h-6" />
-                <span>Adjust Balance</span>
-              </Button>
+                <Button
+                  onClick={() => {
+                    console.log('Switching to users tab');
+                    setActiveTab('users');
+                    toast.success('Switched to User Management');
+                  }}
+                  variant="secondary"
+                  className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20 hover:from-blue-500/20 hover:to-blue-600/20 hover:border-blue-500/30 transition-all duration-300"
+                >
+                  <UserCheck className="w-6 h-6 text-blue-400" />
+                  <span className="text-blue-300 font-medium">Manage Users</span>
+                </Button>
+              </motion.div>
               
-              <Button
-                onClick={() => setActiveTab('users')}
-                variant="secondary"
-                className="h-20 flex flex-col items-center justify-center space-y-2"
+              <motion.div
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
               >
-                <UserCheck className="w-6 h-6" />
-                <span>Manage Users</span>
-              </Button>
+                <Button
+                  onClick={() => {
+                    console.log('Switching to transactions tab');
+                    setActiveTab('transactions');
+                    toast.success('Switched to Transaction Review');
+                  }}
+                  variant="secondary"
+                  className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/20 hover:from-green-500/20 hover:to-green-600/20 hover:border-green-500/30 transition-all duration-300"
+                >
+                  <CreditCard className="w-6 h-6 text-green-400" />
+                  <span className="text-green-300 font-medium">Review Transactions</span>
+                </Button>
+              </motion.div>
               
-              <Button
-                onClick={() => setActiveTab('kyc')}
-                variant="secondary"
-                className="h-20 flex flex-col items-center justify-center space-y-2"
+              <motion.div
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
               >
-                <FileCheck className="w-6 h-6" />
-                <span>Review KYC</span>
-              </Button>
+                <Button
+                  onClick={() => {
+                    console.log('Switching to audit tab');
+                    setActiveTab('audit');
+                    toast.success('Switched to Activity Logs');
+                  }}
+                  variant="secondary"
+                  className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20 hover:from-purple-500/20 hover:to-purple-600/20 hover:border-purple-500/30 transition-all duration-300"
+                >
+                  <Activity className="w-6 h-6 text-purple-400" />
+                  <span className="text-purple-300 font-medium">Activity Logs</span>
+                </Button>
+              </motion.div>
               
-              <Button
-                onClick={() => setActiveTab('audit')}
-                variant="secondary"
-                className="h-20 flex flex-col items-center justify-center space-y-2"
+              <motion.div
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
               >
-                <Shield className="w-6 h-6" />
-                <span>Audit Log</span>
-              </Button>
+                <Button
+                  onClick={() => {
+                    console.log('Switching to settings tab');
+                    setActiveTab('settings');
+                    toast.success('Switched to System Settings');
+                  }}
+                  variant="secondary"
+                  className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-gradient-to-br from-amber-500/10 to-amber-600/10 border-amber-500/20 hover:from-amber-500/20 hover:to-amber-600/20 hover:border-amber-500/30 transition-all duration-300"
+                >
+                  <Settings className="w-6 h-6 text-amber-400" />
+                  <span className="text-amber-300 font-medium">System Settings</span>
+                </Button>
+              </motion.div>
             </div>
           </CardContent>
         </Card>
@@ -796,6 +848,252 @@ function AdminOverviewContent() {
     );
   };
 
+  const renderTransactionsTab = () => {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-6"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CreditCard className="w-5 h-5 text-blue-400" />
+              <span>Transaction Management</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl p-6 border border-green-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-green-400 font-medium">Total Volume</span>
+                  <ArrowUpRight className="w-5 h-5 text-green-400" />
+                </div>
+                <div className="text-2xl font-bold text-white">$2,847,392</div>
+                <div className="text-green-400 text-sm">+12.5% from last month</div>
+              </div>
+              <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl p-6 border border-blue-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-blue-400 font-medium">Transactions</span>
+                  <Activity className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="text-2xl font-bold text-white">15,847</div>
+                <div className="text-blue-400 text-sm">+8.2% from last month</div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl p-6 border border-purple-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-purple-400 font-medium">Avg. Size</span>
+                  <TrendingUp className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="text-2xl font-bold text-white">$179.82</div>
+                <div className="text-purple-400 text-sm">+3.1% from last month</div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">Recent Transactions</h3>
+              <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/40">
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between py-3 border-b border-slate-700/50 last:border-b-0">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                          <DollarSign className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">User Transaction #{1000 + i}</p>
+                          <p className="text-slate-400 text-sm">{new Date(Date.now() - i * 3600000).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-semibold">${(Math.random() * 1000 + 100).toFixed(2)}</p>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                          Completed
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
+
+  const renderSettingsTab = () => {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-6"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Settings className="w-5 h-5 text-blue-400" />
+              <span>System Settings</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Platform Settings */}
+              <div className="space-y-6">
+                <div className="bg-slate-800/40 rounded-xl p-6 border border-slate-700/40">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <Server className="w-5 h-5 text-blue-400" />
+                    <span>Platform Configuration</span>
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Trading Hours</p>
+                        <p className="text-slate-400 text-sm">Market operating schedule</p>
+                      </div>
+                      <Button size="sm" variant="outline">Configure</Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Fee Structure</p>
+                        <p className="text-slate-400 text-sm">Commission and service fees</p>
+                      </div>
+                      <Button size="sm" variant="outline">Manage</Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Withdrawal Limits</p>
+                        <p className="text-slate-400 text-sm">Daily and monthly limits</p>
+                      </div>
+                      <Button size="sm" variant="outline">Edit</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/40 rounded-xl p-6 border border-slate-700/40">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <Lock className="w-5 h-5 text-amber-400" />
+                    <span>Security Settings</span>
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Two-Factor Authentication</p>
+                        <p className="text-slate-400 text-sm">Require 2FA for admin access</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-green-400 text-sm">Enabled</span>
+                        <div className="w-10 h-6 bg-green-500 rounded-full flex items-center justify-end px-1">
+                          <div className="w-4 h-4 bg-white rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Session Timeout</p>
+                        <p className="text-slate-400 text-sm">Auto-logout inactive sessions</p>
+                      </div>
+                      <Button size="sm" variant="outline">Configure</Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">IP Whitelist</p>
+                        <p className="text-slate-400 text-sm">Restrict admin access by IP</p>
+                      </div>
+                      <Button size="sm" variant="outline">Manage</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Communication Settings */}
+              <div className="space-y-6">
+                <div className="bg-slate-800/40 rounded-xl p-6 border border-slate-700/40">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <Bell className="w-5 h-5 text-purple-400" />
+                    <span>Notifications</span>
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Transaction Alerts</p>
+                        <p className="text-slate-400 text-sm">Large transaction notifications</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-green-400 text-sm">Enabled</span>
+                        <div className="w-10 h-6 bg-green-500 rounded-full flex items-center justify-end px-1">
+                          <div className="w-4 h-4 bg-white rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">System Alerts</p>
+                        <p className="text-slate-400 text-sm">System status notifications</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-green-400 text-sm">Enabled</span>
+                        <div className="w-10 h-6 bg-green-500 rounded-full flex items-center justify-end px-1">
+                          <div className="w-4 h-4 bg-white rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/40 rounded-xl p-6 border border-slate-700/40">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <Mail className="w-5 h-5 text-green-400" />
+                    <span>Email Configuration</span>
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">SMTP Server</p>
+                        <p className="text-slate-400 text-sm">smtp.gmail.com:587</p>
+                      </div>
+                      <span className="text-green-400 text-sm">Connected</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Email Templates</p>
+                        <p className="text-slate-400 text-sm">Customize user emails</p>
+                      </div>
+                      <Button size="sm" variant="outline">Edit</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/40 rounded-xl p-6 border border-slate-700/40">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <Database className="w-5 h-5 text-red-400" />
+                    <span>System Maintenance</span>
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">Database Backup</p>
+                        <p className="text-slate-400 text-sm">Last backup: 2 hours ago</p>
+                      </div>
+                      <Button size="sm" variant="outline">Backup Now</Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">System Update</p>
+                        <p className="text-slate-400 text-sm">Version 2.1.4 available</p>
+                      </div>
+                      <Button size="sm" variant="primary">Update</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="space-y-8">
       {/* Header with Tabs */}
@@ -815,8 +1113,10 @@ function AdminOverviewContent() {
             {[
               { id: 'overview', label: 'Overview', icon: TrendingUp },
               { id: 'users', label: 'Users', icon: Users },
+              { id: 'transactions', label: 'Transactions', icon: CreditCard },
               { id: 'kyc', label: 'KYC', icon: FileCheck },
-              { id: 'audit', label: 'Audit Log', icon: Shield }
+              { id: 'audit', label: 'Activity Logs', icon: Shield },
+              { id: 'settings', label: 'Settings', icon: Settings }
             ].map(({ id, label, icon: Icon }) => (
               <button
                 key={id}

@@ -264,8 +264,8 @@ export default function SignUpPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(139,92,246,0.1),transparent_50%)]"></div>
           
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="relative z-10 max-w-md px-8"
           >
@@ -319,8 +319,8 @@ export default function SignUpPage() {
         {/* Right Side - Sign Up Form */}
         <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
           <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="max-w-md w-full space-y-8"
           >

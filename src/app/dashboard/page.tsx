@@ -506,6 +506,14 @@ export default function Dashboard() {
             </div>
           </ResponsiveContainer>
         )}
+        
+        {/* Withdrawal Modal */}
+        <WithdrawalModal
+          isOpen={showWithdrawalModal}
+          onClose={() => setShowWithdrawalModal(false)}
+          accountBalance={dashboardData?.portfolio.totalBalance || 5899}
+          onWithdrawalRequest={handleWithdrawalRequest}
+        />
       </ResponsiveLayout>
     </ProtectedRoute>
   )
