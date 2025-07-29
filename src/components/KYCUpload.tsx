@@ -168,7 +168,7 @@ export const KYCUpload: React.FC<KYCUploadProps> = ({
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      const response = await api.post('/api/user/kyc/upload', formData);
+      const response = await api.post('/api/kyc/upload', formData);
 
       clearInterval(progressInterval);
       setUploadProgress(100);

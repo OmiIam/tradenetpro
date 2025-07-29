@@ -14,7 +14,7 @@ export default function KYCPage() {
   useEffect(() => {
     const fetchKYCData = async () => {
       try {
-        const response = await api.get('/api/user/kyc/status');
+        const response = await api.get('/api/kyc/status');
         const responseData = response.data || response;
         
         setDocuments((responseData as any)?.documents || []);

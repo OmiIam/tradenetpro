@@ -180,7 +180,7 @@ export const adminApi = {
       ...filters
     });
     
-    const response = await apiClient.get<{ documents: any[], pagination: { total: number } }>(`/api/admin/kyc?${params}`);
+    const response = await apiClient.get<{ documents: any[], pagination: { total: number } }>(`/api/kyc/documents?${params}`);
     
     if (response.data) {
       return {
