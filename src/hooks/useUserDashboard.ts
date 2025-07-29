@@ -287,11 +287,21 @@ export function useUserProfile() {
     try {
       setLoading(true)
       const response = await api.get('/api/user/profile')
-      setProfile((response.data as any).user)
-      setError(null)
+      console.log('Profile fetch response:', response)
+      
+      // Handle response structure - API client might wrap responses
+      const responseData = response.data || response
+      const user = (responseData as any)?.user || responseData
+      
+      if (user) {
+        setProfile(user)
+        setError(null)
+      } else {
+        throw new Error('No user data received from API')
+      }
     } catch (err: any) {
       console.error('Error fetching profile:', err)
-      setError(err.response?.data?.error || 'Failed to fetch profile')
+      setError(err.response?.data?.error || err.message || 'Failed to fetch profile')
     } finally {
       setLoading(false)
     }
@@ -300,11 +310,21 @@ export function useUserProfile() {
   const updateProfile = async (profileData: any) => {
     try {
       const response = await api.put('/api/user/profile', profileData)
-      setProfile((response.data as any).user)
-      return response.data
+      console.log('Profile update response:', response)
+      
+      // Handle response structure - API client might wrap responses
+      const responseData = response.data || response
+      const user = (responseData as any)?.user || responseData
+      
+      if (user) {
+        setProfile(user)
+        return responseData
+      } else {
+        throw new Error('No user data received from update API')
+      }
     } catch (err: any) {
       console.error('Error updating profile:', err)
-      throw new Error(err.response?.data?.error || 'Failed to update profile')
+      throw new Error(err.response?.data?.error || err.message || 'Failed to update profile')
     }
   }
 

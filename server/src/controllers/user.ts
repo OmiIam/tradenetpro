@@ -98,7 +98,24 @@ export class UserController {
   async updateProfile(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { first_name, last_name, email } = req.body;
+      const { 
+        first_name, 
+        last_name, 
+        email, 
+        phone_number, 
+        country, 
+        timezone, 
+        bio,
+        address_line_1, 
+        address_line_2, 
+        city, 
+        state, 
+        postal_code,
+        notification_email,
+        notification_push,
+        notification_sms,
+        two_factor_enabled
+      } = req.body;
 
       // Check if email is already taken by another user
       if (email) {
@@ -109,11 +126,26 @@ export class UserController {
         }
       }
 
-      const updatedUser = this.userModel.updateUser(userId, {
-        first_name,
-        last_name,
-        email
-      });
+      // Prepare update data - only include fields that are provided
+      const updateData: any = {};
+      if (first_name !== undefined) updateData.first_name = first_name;
+      if (last_name !== undefined) updateData.last_name = last_name;
+      if (email !== undefined) updateData.email = email;
+      if (phone_number !== undefined) updateData.phone_number = phone_number;
+      if (country !== undefined) updateData.country = country;
+      if (timezone !== undefined) updateData.timezone = timezone;
+      if (bio !== undefined) updateData.bio = bio;
+      if (address_line_1 !== undefined) updateData.address_line_1 = address_line_1;
+      if (address_line_2 !== undefined) updateData.address_line_2 = address_line_2;
+      if (city !== undefined) updateData.city = city;
+      if (state !== undefined) updateData.state = state;
+      if (postal_code !== undefined) updateData.postal_code = postal_code;
+      if (notification_email !== undefined) updateData.notification_email = notification_email;
+      if (notification_push !== undefined) updateData.notification_push = notification_push;
+      if (notification_sms !== undefined) updateData.notification_sms = notification_sms;
+      if (two_factor_enabled !== undefined) updateData.two_factor_enabled = two_factor_enabled;
+
+      const updatedUser = this.userModel.updateUser(userId, updateData);
 
       if (!updatedUser) {
         res.status(404).json({ error: 'User not found' });

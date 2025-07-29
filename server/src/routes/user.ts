@@ -60,6 +60,67 @@ export default function createUserRoutes(database: DatabaseManager) {
       .isEmail()
       .normalizeEmail()
       .withMessage('Please provide a valid email address'),
+    body('phone_number')
+      .optional()
+      .trim()
+      .isLength({ max: 20 })
+      .withMessage('Phone number must be less than 20 characters'),
+    body('country')
+      .optional()
+      .trim()
+      .isLength({ max: 100 })
+      .withMessage('Country must be less than 100 characters'),
+    body('timezone')
+      .optional()
+      .trim()
+      .isLength({ max: 50 })
+      .withMessage('Timezone must be less than 50 characters'),
+    body('bio')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Bio must be less than 500 characters'),
+    body('address_line_1')
+      .optional()
+      .trim()
+      .isLength({ max: 255 })
+      .withMessage('Address line 1 must be less than 255 characters'),
+    body('address_line_2')
+      .optional()
+      .trim()
+      .isLength({ max: 255 })
+      .withMessage('Address line 2 must be less than 255 characters'),
+    body('city')
+      .optional()
+      .trim()
+      .isLength({ max: 100 })
+      .withMessage('City must be less than 100 characters'),
+    body('state')
+      .optional()
+      .trim()
+      .isLength({ max: 100 })
+      .withMessage('State must be less than 100 characters'),
+    body('postal_code')
+      .optional()
+      .trim()
+      .isLength({ max: 20 })
+      .withMessage('Postal code must be less than 20 characters'),
+    body('notification_email')
+      .optional()
+      .isBoolean()
+      .withMessage('Email notification preference must be a boolean'),
+    body('notification_push')
+      .optional()
+      .isBoolean()
+      .withMessage('Push notification preference must be a boolean'),
+    body('notification_sms')
+      .optional()
+      .isBoolean()
+      .withMessage('SMS notification preference must be a boolean'),
+    body('two_factor_enabled')
+      .optional()
+      .isBoolean()
+      .withMessage('Two factor authentication setting must be a boolean'),
   ], async (req: express.Request, res: express.Response) => {
     await userController.updateProfile(req, res);
   });

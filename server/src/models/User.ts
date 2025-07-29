@@ -60,12 +60,19 @@ export interface UpdateUserData {
   state?: string;
   postal_code?: string;
   country?: string;
+  timezone?: string;
+  bio?: string;
+  profile_picture?: string;
   role?: 'user' | 'admin';
   status?: 'active' | 'suspended' | 'inactive' | 'pending_verification' | 'pending_approval';
   email_verified?: boolean;
   phone_verified?: boolean;
   kyc_status?: 'pending' | 'approved' | 'rejected' | 'under_review';
   account_funded?: boolean;
+  two_factor_enabled?: boolean;
+  notification_email?: boolean;
+  notification_push?: boolean;
+  notification_sms?: boolean;
 }
 
 export class UserModel {
@@ -298,6 +305,40 @@ export class UserModel {
     if (userData.account_funded !== undefined) {
       updateFields.push('account_funded = ?');
       values.push(userData.account_funded);
+    }
+
+    // Profile fields
+    if (userData.timezone !== undefined) {
+      updateFields.push('timezone = ?');
+      values.push(userData.timezone);
+    }
+    if (userData.bio !== undefined) {
+      updateFields.push('bio = ?');
+      values.push(userData.bio);
+    }
+    if (userData.profile_picture !== undefined) {
+      updateFields.push('profile_picture = ?');
+      values.push(userData.profile_picture);
+    }
+
+    // Notification preferences
+    if (userData.notification_email !== undefined) {
+      updateFields.push('notification_email = ?');
+      values.push(userData.notification_email);
+    }
+    if (userData.notification_push !== undefined) {
+      updateFields.push('notification_push = ?');
+      values.push(userData.notification_push);
+    }
+    if (userData.notification_sms !== undefined) {
+      updateFields.push('notification_sms = ?');
+      values.push(userData.notification_sms);
+    }
+
+    // Security settings
+    if (userData.two_factor_enabled !== undefined) {
+      updateFields.push('two_factor_enabled = ?');
+      values.push(userData.two_factor_enabled);
     }
 
     if (updateFields.length === 0) {

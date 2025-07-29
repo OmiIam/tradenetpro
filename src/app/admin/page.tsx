@@ -107,102 +107,164 @@ function AdminOverviewContent() {
         // Don't set error state for metadata failures to avoid blocking other functionality
       }
       
-      // Fetch all data in parallel
-      const [usersResponse, kycResponse, auditResponse] = await Promise.allSettled([
-        adminApi.getRealUsers(1, 20),
-        adminApi.getKycDocuments(1, 20),
-        adminApi.getAuditLogs(1, 50)
-      ]);
-      
-      // Handle users data - transform BackendUser to AdminUser
-      if (usersResponse.status === 'fulfilled') {
-        // For each user, also try to fetch their portfolio/balance data
-        const usersWithBalances = await Promise.all(
-          usersResponse.value.users.map(async (user) => {
-            try {
-              // Try to get user's portfolio to get balance
-              const portfolio = await adminApi.getUserPortfolio(user.id);
-              return {
-                ...user,
-                last_login: user.last_login || undefined,
-                total_balance: portfolio.total_balance || (user as any).total_balance || 0
-              };
-            } catch (error) {
-              // If portfolio fetch fails, use user data balance or generate consistent demo balance
-              console.warn(`Failed to fetch portfolio for user ${user.id}:`, error);
-              // Generate consistent demo balance based on user ID to avoid random changes
-              const demoBalance = ((user.id * 1337) % 9000) + 1000; // Consistent demo balance between $1,000-$10,000
-              return {
-                ...user,
-                last_login: user.last_login || undefined,
-                total_balance: (user as any).total_balance || demoBalance
-              };
-            }
-          })
-        );
+      // Fetch all data in parallel - try optimized endpoint first
+      let usersResponse;
+      try {
+        // Try to use the optimized users-with-portfolios endpoint
+        usersResponse = await adminApi.getUsersWithPortfolios(1, 20);
         
-        setUsers(usersWithBalances);
+        // Transform the response to match AdminUser format with balance
+        const transformedUsers = usersResponse.users.map((userWithPortfolio) => ({
+          id: userWithPortfolio.id,
+          first_name: userWithPortfolio.first_name,
+          last_name: userWithPortfolio.last_name,
+          email: userWithPortfolio.email,
+          status: userWithPortfolio.status,
+          created_at: userWithPortfolio.created_at,
+          updated_at: userWithPortfolio.updated_at,
+          last_login: userWithPortfolio.last_login || undefined,
+          role: userWithPortfolio.role,
+          total_balance: userWithPortfolio.total_balance || 0
+        }));
+        
+        setUsers(transformedUsers);
+        console.log('✅ Successfully fetched users with portfolio data:', transformedUsers.length);
+        
+        // Fetch other data in parallel
+        const [kycResponse, auditResponse] = await Promise.allSettled([
+          adminApi.getKycDocuments(1, 20),
+          adminApi.getAuditLogs(1, 50)
+        ]);
+        
         // Clear users error if successful
         setDataErrors(prev => {
           const { users, ...rest } = prev;
           return rest;
         });
-      } else {
-        // Check if it's a permission error and handle silently
-        const error = usersResponse.reason;
-        if (error?.message?.includes('permission') || error?.status === 403) {
-          console.warn('No permission to access users data');
-          setDataErrors(prev => ({ ...prev, users: 'No permission to view users' }));
-        } else if (error?.status === 404) {
-          console.warn('Users endpoint not found');
-          setDataErrors(prev => ({ ...prev, users: 'Users endpoint not available' }));
+        
+        // Handle KYC and audit responses
+        if (kycResponse.status === 'fulfilled') {
+          setKycDocuments(kycResponse.value.documents);
+          setDataErrors(prev => {
+            const { kyc, ...rest } = prev;
+            return rest;
+          });
         } else {
-          console.error('Failed to fetch users:', error);
-          setDataErrors(prev => ({ ...prev, users: 'Failed to load users' }));
-        }
-      }
-      
-      // Handle KYC documents
-      if (kycResponse.status === 'fulfilled') {
-        setKycDocuments(kycResponse.value.documents);
-        // Clear KYC error if successful
-        setDataErrors(prev => {
-          const { kyc, ...rest } = prev;
-          return rest;
-        });
-      } else {
-        const error = kycResponse.reason;
-        if (error?.message?.includes('permission') || error?.status === 403) {
-          console.warn('No permission to access KYC data');
-          setDataErrors(prev => ({ ...prev, kyc: 'No permission to view KYC documents' }));
-        } else if (error?.status === 404) {
-          console.warn('KYC endpoint not found');
-          setDataErrors(prev => ({ ...prev, kyc: 'KYC endpoint not available' }));
-        } else {
-          console.error('Failed to fetch KYC documents:', error);
+          console.error('Failed to fetch KYC documents:', kycResponse.reason);
           setDataErrors(prev => ({ ...prev, kyc: 'Failed to load KYC documents' }));
         }
-      }
-      
-      // Handle audit logs
-      if (auditResponse.status === 'fulfilled') {
-        setAuditEntries(auditResponse.value.logs);
-        // Clear audit error if successful
-        setDataErrors(prev => {
-          const { audit, ...rest } = prev;
-          return rest;
-        });
-      } else {
-        const error = auditResponse.reason;
-        if (error?.message?.includes('permission') || error?.status === 403) {
-          console.warn('No permission to access audit logs');
-          setDataErrors(prev => ({ ...prev, audit: 'No permission to view audit logs' }));
-        } else if (error?.status === 404) {
-          console.warn('Audit logs endpoint not found');
-          setDataErrors(prev => ({ ...prev, audit: 'Audit logs endpoint not available' }));
+        
+        if (auditResponse.status === 'fulfilled') {
+          setAuditEntries(auditResponse.value.logs);
+          setDataErrors(prev => {
+            const { audit, ...rest } = prev;
+            return rest;
+          });
         } else {
-          console.error('Failed to fetch audit logs:', error);
+          console.error('Failed to fetch audit logs:', auditResponse.reason);
           setDataErrors(prev => ({ ...prev, audit: 'Failed to load audit logs' }));
+        }
+        
+      } catch (optimizedError) {
+        console.warn('⚠️ Optimized endpoint failed, falling back to individual fetches:', optimizedError);
+        
+        // Fallback to original method
+        const [usersResponse, kycResponse, auditResponse] = await Promise.allSettled([
+          adminApi.getRealUsers(1, 20),
+          adminApi.getKycDocuments(1, 20),
+          adminApi.getAuditLogs(1, 50)
+        ]);
+        
+        // Handle users data - transform BackendUser to AdminUser
+        if (usersResponse.status === 'fulfilled') {
+          // For each user, also try to fetch their portfolio/balance data
+          const usersWithBalances = await Promise.all(
+            usersResponse.value.users.map(async (user) => {
+              try {
+                // Try to get user's portfolio to get balance
+                const portfolio = await adminApi.getUserPortfolio(user.id);
+                return {
+                  ...user,
+                  last_login: user.last_login || undefined,
+                  total_balance: portfolio.total_balance || (user as any).total_balance || 0
+                };
+              } catch (error) {
+                // If portfolio fetch fails, use user data balance or generate consistent demo balance
+                console.warn(`Failed to fetch portfolio for user ${user.id}:`, error);
+                // Generate consistent demo balance based on user ID to avoid random changes
+                const demoBalance = ((user.id * 1337) % 9000) + 1000; // Consistent demo balance between $1,000-$10,000
+                return {
+                  ...user,
+                  last_login: user.last_login || undefined,
+                  total_balance: (user as any).total_balance || demoBalance
+                };
+              }
+            })
+          );
+        
+          setUsers(usersWithBalances);
+          // Clear users error if successful
+          setDataErrors(prev => {
+            const { users, ...rest } = prev;
+            return rest;
+          });
+        } else {
+          // Check if it's a permission error and handle silently
+          const error = usersResponse.reason;
+          if (error?.message?.includes('permission') || error?.status === 403) {
+            console.warn('No permission to access users data');
+            setDataErrors(prev => ({ ...prev, users: 'No permission to view users' }));
+          } else if (error?.status === 404) {
+            console.warn('Users endpoint not found');
+            setDataErrors(prev => ({ ...prev, users: 'Users endpoint not available' }));
+          } else {
+            console.error('Failed to fetch users:', error);
+            setDataErrors(prev => ({ ...prev, users: 'Failed to load users' }));
+          }
+        }
+        
+        // Handle KYC documents
+        if (kycResponse.status === 'fulfilled') {
+          setKycDocuments(kycResponse.value.documents);
+          // Clear KYC error if successful
+          setDataErrors(prev => {
+            const { kyc, ...rest } = prev;
+            return rest;
+          });
+        } else {
+          const error = kycResponse.reason;
+          if (error?.message?.includes('permission') || error?.status === 403) {
+            console.warn('No permission to access KYC data');
+            setDataErrors(prev => ({ ...prev, kyc: 'No permission to view KYC documents' }));
+          } else if (error?.status === 404) {
+            console.warn('KYC endpoint not found');
+            setDataErrors(prev => ({ ...prev, kyc: 'KYC endpoint not available' }));
+          } else {
+            console.error('Failed to fetch KYC documents:', error);
+            setDataErrors(prev => ({ ...prev, kyc: 'Failed to load KYC documents' }));
+          }
+        }
+        
+        // Handle audit logs
+        if (auditResponse.status === 'fulfilled') {
+          setAuditEntries(auditResponse.value.logs);
+          // Clear audit error if successful
+          setDataErrors(prev => {
+            const { audit, ...rest } = prev;
+            return rest;
+          });
+        } else {
+          const error = auditResponse.reason;
+          if (error?.message?.includes('permission') || error?.status === 403) {
+            console.warn('No permission to access audit logs');
+            setDataErrors(prev => ({ ...prev, audit: 'No permission to view audit logs' }));
+          } else if (error?.status === 404) {
+            console.warn('Audit logs endpoint not found');
+            setDataErrors(prev => ({ ...prev, audit: 'Audit logs endpoint not available' }));
+          } else {
+            console.error('Failed to fetch audit logs:', error);
+            setDataErrors(prev => ({ ...prev, audit: 'Failed to load audit logs' }));
+          }
         }
       }
       
