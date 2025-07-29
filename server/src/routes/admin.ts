@@ -13,6 +13,7 @@ import {
 } from '../middleware/validation';
 import DatabaseManager from '../models/Database';
 import rateLimit from 'express-rate-limit';
+import sessionRoutes from './admin/sessions';
 
 const router = express.Router();
 
@@ -338,6 +339,9 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.deleteSetting(req, res);
   });
 
-  console.log(`[ADMIN] Admin routes registered successfully, including KYC management, /users-with-portfolios, system settings, user suspensions, and admin notifications`);
+  // Session tracking routes
+  router.use('/sessions', sessionRoutes);
+
+  console.log(`[ADMIN] Admin routes registered successfully, including KYC management, /users-with-portfolios, system settings, user suspensions, admin notifications, and session tracking`);
   return router;
 }

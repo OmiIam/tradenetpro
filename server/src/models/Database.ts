@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
+import AdvancedAdminSchemas from './AdvancedAdminSchemas';
 
 export class DatabaseManager {
   private static instance: DatabaseManager;
@@ -27,6 +28,9 @@ export class DatabaseManager {
     
     // Create tables
     this.createTables();
+    
+    // Create advanced admin schemas
+    this.createAdvancedSchemas();
     
     // Create indexes
     this.createIndexes();
@@ -435,6 +439,11 @@ export class DatabaseManager {
 
     // Create default system settings
     this.createDefaultSettings();
+  }
+
+  private createAdvancedSchemas() {
+    const advancedSchemas = new AdvancedAdminSchemas(this.db);
+    advancedSchemas.createAdvancedSchemas();
   }
 
   private createDefaultSettings() {

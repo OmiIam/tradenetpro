@@ -3,14 +3,17 @@ import { UserModel, CreateUserData } from '../models/User';
 import AuthUtils from '../utils/auth';
 import DatabaseManager from '../models/Database';
 import { VerificationService } from '../services/VerificationService';
+import SessionTrackingService from '../services/SessionTrackingService';
 
 export class AuthController {
   private userModel: UserModel;
   private verificationService: VerificationService;
+  private sessionService: SessionTrackingService;
 
   constructor(database: DatabaseManager) {
     this.userModel = new UserModel(database.getDatabase());
     this.verificationService = new VerificationService(database);
+    this.sessionService = new SessionTrackingService(database.getDatabase());
   }
 
   async register(req: Request, res: Response): Promise<void> {
@@ -133,12 +136,24 @@ export class AuthController {
       // Find user by email
       const user = this.userModel.getUserByEmail(email);
       if (!user) {
+        // Log failed login attempt
+        await this.sessionService.logLoginAttempt({
+          login_type: 'failed',
+          failure_reason: 'User not found',
+          request: req
+        });
         res.status(401).json({ error: 'Invalid credentials' });
         return;
       }
 
       // Check if user is active
       if (user.status !== 'active') {
+        await this.sessionService.logLoginAttempt({
+          user_id: user.id,
+          login_type: 'blocked',
+          failure_reason: 'Account not active',
+          request: req
+        });
         res.status(401).json({ error: 'Account is not active' });
         return;
       }
@@ -146,6 +161,12 @@ export class AuthController {
       // Validate password
       const isValidPassword = await this.userModel.validatePassword(user, password);
       if (!isValidPassword) {
+        await this.sessionService.logLoginAttempt({
+          user_id: user.id,
+          login_type: 'failed',
+          failure_reason: 'Invalid password',
+          request: req
+        });
         res.status(401).json({ error: 'Invalid credentials' });
         return;
       }
@@ -158,6 +179,18 @@ export class AuthController {
         userId: user.id,
         email: user.email,
         role: user.role
+      });
+
+      // Create session with tracking
+      const tokenHash = AuthUtils.hashToken(tokenPair.accessToken);
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
+
+      await this.sessionService.createSession({
+        user_id: user.id,
+        token_hash: tokenHash,
+        expires_at: expiresAt.toISOString(),
+        request: req
       });
 
       // Don't send password hash in response
@@ -176,8 +209,27 @@ export class AuthController {
 
   async logout(req: Request, res: Response): Promise<void> {
     try {
-      // In a more sophisticated implementation, you would invalidate the token
-      // For now, we'll just send a success response
+      // Extract token from request
+      const authHeader = req.headers['authorization'];
+      const token = AuthUtils.extractTokenFromHeader(authHeader);
+      
+      if (token) {
+        // Find and end the session
+        const tokenHash = AuthUtils.hashToken(token);
+        const db = this.userModel['db']; // Access private db property
+        
+        const sessionQuery = db.prepare(`
+          SELECT us.id as session_id
+          FROM user_sessions us
+          WHERE us.token_hash = ?
+        `);
+        
+        const session = sessionQuery.get(tokenHash);
+        if (session) {
+          this.sessionService.endSession((session as any).session_id);
+        }
+      }
+
       res.json({ message: 'Logout successful' });
     } catch (error) {
       console.error('Logout error:', error);

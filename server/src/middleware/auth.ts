@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import AuthUtils, { JWTPayload } from '../utils/auth';
+import SessionTrackingService from '../services/SessionTrackingService';
+import DatabaseManager from '../models/Database';
 
 // Extend Express Request interface to include user
 declare global {
@@ -14,6 +16,10 @@ export interface AuthenticatedRequest extends Request {
   user: JWTPayload;
 }
 
+// Initialize session tracking service
+const database = DatabaseManager.getInstance().getDatabase();
+const sessionService = new SessionTrackingService(database);
+
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token = AuthUtils.extractTokenFromHeader(authHeader);
@@ -27,6 +33,25 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   if (!payload) {
     res.status(403).json({ error: 'Invalid or expired token' });
     return;
+  }
+
+  // Update session activity if token is valid
+  try {
+    // Find the session ID from the token hash
+    const tokenHash = AuthUtils.hashToken(token);
+    const sessionQuery = database.prepare(`
+      SELECT us.id as session_id
+      FROM user_sessions us
+      WHERE us.token_hash = ? AND us.expires_at > datetime('now')
+    `);
+    
+    const session = sessionQuery.get(tokenHash);
+    if (session) {
+      sessionService.updateSessionActivity((session as any).session_id);
+    }
+  } catch (error) {
+    console.error('Error updating session activity:', error);
+    // Don't fail the request if session tracking fails
   }
 
   req.user = payload;
@@ -91,10 +116,14 @@ export const requireOwnershipOrAdmin = (userIdParam: string = 'userId') => {
   };
 };
 
+// Combined middleware for admin authentication
+export const requireAdminAuth = [authenticateToken, requireAdmin];
+
 export default {
   authenticateToken,
   requireAdmin,
   requireUser,
   optionalAuth,
-  requireOwnershipOrAdmin
+  requireOwnershipOrAdmin,
+  requireAdminAuth
 };

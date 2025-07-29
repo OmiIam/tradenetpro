@@ -22,7 +22,7 @@ interface TidioChatHookOptions {
 
 export const useTidioChat = (options: TidioChatHookOptions = {}) => {
   const { user } = useAuth();
-  const { hideForRoles = [], hideOnPages = [], autoOpenForNewUsers = false } = options;
+  const { hideForRoles = [], hideOnPages = ['/login', '/signup'], autoOpenForNewUsers = false } = options;
 
   // Set user data in Tidio chat
   const setUserData = useCallback(() => {
