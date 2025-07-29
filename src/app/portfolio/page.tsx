@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DepositWithdraw from '@/components/DepositWithdraw';
+import ChatTrigger from '@/components/ChatTrigger';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { apiClient } from '@/lib/api';
 
@@ -175,6 +176,13 @@ export default function PortfolioPage() {
           )}
         </div>
       </div>
+
+      {/* Chat Support for Portfolio Questions */}
+      <ChatTrigger 
+        variant="support" 
+        floating={true}
+        text="Portfolio questions?"
+      />
       </div>
     </ProtectedRoute>
   );

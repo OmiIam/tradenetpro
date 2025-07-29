@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import KYCUpload, { KYCDocument } from '@/components/KYCUpload';
+import ChatTrigger from '@/components/ChatTrigger';
 import { Shield, CheckCircle, AlertCircle, Clock, FileText, Users, Award } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -185,11 +186,20 @@ export default function KYCPage() {
         </div>
 
         {/* KYC Upload Component */}
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/60 rounded-2xl p-8 border border-slate-700/40 backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/60 rounded-2xl p-8 border border-slate-700/40 backdrop-blur-sm relative">
           <KYCUpload
             onUploadComplete={handleUploadComplete}
             existingDocuments={documents}
           />
+          
+          {/* Floating help for KYC issues */}
+          {kycStatus === 'pending' && documents.length === 0 && (
+            <ChatTrigger 
+              variant="help" 
+              floating={true}
+              text="Need help uploading documents?"
+            />
+          )}
         </div>
 
         {/* Requirements Section */}
@@ -240,10 +250,17 @@ export default function KYCPage() {
           <p className="text-slate-400 mb-4">
             Having trouble with verification? Our support team is here to help.
           </p>
-          <button className="inline-flex items-center px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-white font-semibold rounded-xl transition-colors border border-slate-600/50 hover:border-slate-600">
-            <FileText className="w-5 h-5 mr-2" />
-            Contact Support
-          </button>
+          <ChatTrigger 
+            variant="help" 
+            size="lg" 
+            text="Get Verification Help"
+            className="mr-4"
+          />
+          <ChatTrigger 
+            variant="support" 
+            size="lg" 
+            text="Contact Support"
+          />
         </div>
       </div>
     </ProtectedRoute>

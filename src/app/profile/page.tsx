@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Shield, Bell, CreditCard, Key, Save, Camera, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import ChatTrigger from '@/components/ChatTrigger';
 import { useUserProfile } from '@/hooks/useUserDashboard';
 import api from '@/lib/api';
 
@@ -662,6 +663,13 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Chat Support for Profile Help */}
+      <ChatTrigger 
+        variant="help" 
+        floating={true}
+        text="Profile settings help?"
+      />
       </div>
     </ProtectedRoute>
   );

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Bitcoin, Activity, BarChart3 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import ChatTrigger from '@/components/ChatTrigger';
 
 const TRADING_PAIRS = [
   { symbol: 'BTC/USD', name: 'Bitcoin', price: 45230.50, change: 2.45, icon: <Bitcoin className="w-5 h-5 text-yellow-400" /> },
@@ -298,6 +299,13 @@ export default function TradingPage() {
           )}
         </div>
       </div>
+
+      {/* Floating Chat Support for Trading Help */}
+      <ChatTrigger 
+        variant="help" 
+        floating={true}
+        text="Need trading help?"
+      />
       </div>
     </ProtectedRoute>
   );

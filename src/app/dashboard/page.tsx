@@ -6,6 +6,7 @@ import StatsCard from '@/components/StatsCard'
 import MarketChart from '@/components/MarketChart'
 import AIInsights from '@/components/AIInsights'
 import MarketTable from '@/components/MarketTable'
+import ChatTrigger from '@/components/ChatTrigger'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ResponsiveLayout from '@/components/layout/ResponsiveLayout'
 import ResponsiveContainer, { ResponsiveGrid } from '@/components/layout/ResponsiveContainer'
@@ -529,6 +530,15 @@ export default function Dashboard() {
           accountBalance={dashboardData?.portfolio.totalBalance || 5899}
           onWithdrawalRequest={handleWithdrawalRequest}
         />
+
+        {/* Floating Chat Trigger for Trading Help */}
+        {!isMobile && (
+          <ChatTrigger 
+            variant="default" 
+            floating={true}
+            text="Need trading help?"
+          />
+        )}
       </ResponsiveLayout>
     </ProtectedRoute>
   )

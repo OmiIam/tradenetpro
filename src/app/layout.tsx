@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import ToastProvider from '@/components/ToastProvider'
+import TidioChat from '@/components/TidioChat'
 
 export const metadata: Metadata = {
   title: 'trade.im - Professional Trading Platform',
@@ -35,6 +36,9 @@ export default function RootLayout({
           {children}
           <ToastProvider />
         </AuthProvider>
+        
+        {/* Tidio Live Chat Widget */}
+        <TidioChat />
       </body>
     </html>
   )
