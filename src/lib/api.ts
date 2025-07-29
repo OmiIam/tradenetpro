@@ -63,7 +63,15 @@ class ApiClient {
       throw new Error(errorMessage);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse JSON response:', parseError);
+      throw new Error('Invalid JSON response from server');
+    }
+    
+    console.log('Parsed response data:', data);
     return data;
   }
 

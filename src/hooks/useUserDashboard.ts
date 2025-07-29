@@ -288,20 +288,86 @@ export function useUserProfile() {
       setLoading(true)
       const response = await api.get('/api/user/profile')
       console.log('Profile fetch response:', response)
+      console.log('Response type:', typeof response)
+      console.log('Response keys:', response ? Object.keys(response) : 'no response')
       
-      // Handle response structure - API client might wrap responses
-      const responseData = response.data || response
-      const user = (responseData as any)?.user || responseData
+      // Handle multiple possible response structures
+      let user = null
       
-      if (user) {
+      // Try different response structure patterns
+      if ((response as any)?.data?.user) {
+        console.log('Found user in response.data.user')
+        user = (response as any).data.user
+      } else if ((response as any)?.user) {
+        console.log('Found user in response.user')
+        user = (response as any).user
+      } else if ((response as any)?.data && typeof (response as any).data === 'object' && (response as any).data.id) {
+        console.log('Found user in response.data (direct user object)')
+        user = (response as any).data
+      } else if (response && typeof response === 'object' && (response as any).id) {
+        console.log('Found user in response (direct user object)')
+        user = response
+      } else {
+        console.log('Trying to find user in nested response properties...')
+        // More aggressive search for user data
+        const searchForUser = (obj: any): any => {
+          if (!obj || typeof obj !== 'object') return null
+          if (obj.id && obj.email) return obj // Looks like user object
+          for (const key in obj) {
+            if (obj[key] && typeof obj[key] === 'object') {
+              const found = searchForUser(obj[key])
+              if (found) return found
+            }
+          }
+          return null
+        }
+        user = searchForUser(response)
+      }
+      
+      console.log('Extracted user:', user)
+      
+      if (user && user.id) {
         setProfile(user)
         setError(null)
       } else {
-        throw new Error('No user data received from API')
+        console.error('No valid user data found in response:', response)
+        setError('Unable to load profile data')
+        // Set a fallback empty profile to prevent crashes
+        setProfile({
+          id: 0,
+          email: '',
+          first_name: '',
+          last_name: '',
+          phone_number: '',
+          bio: '',
+          address_line_1: '',
+          address_line_2: '',
+          city: '',
+          state: '',
+          postal_code: '',
+          country: '',
+          timezone: 'UTC'
+        })
       }
     } catch (err: any) {
       console.error('Error fetching profile:', err)
       setError(err.response?.data?.error || err.message || 'Failed to fetch profile')
+      // Set a fallback empty profile to prevent crashes
+      setProfile({
+        id: 0,
+        email: '',
+        first_name: '',
+        last_name: '',
+        phone_number: '',
+        bio: '',
+        address_line_1: '',
+        address_line_2: '',
+        city: '',
+        state: '',
+        postal_code: '',
+        country: '',
+        timezone: 'UTC'
+      })
     } finally {
       setLoading(false)
     }
@@ -312,14 +378,32 @@ export function useUserProfile() {
       const response = await api.put('/api/user/profile', profileData)
       console.log('Profile update response:', response)
       
-      // Handle response structure - API client might wrap responses
-      const responseData = response.data || response
-      const user = (responseData as any)?.user || responseData
+      // Handle multiple possible response structures
+      let user = null
+      let responseData = response
       
-      if (user) {
+      // Try different response structure patterns
+      if ((response as any)?.data?.user) {
+        user = (response as any).data.user
+        responseData = (response as any).data
+      } else if ((response as any)?.user) {
+        user = (response as any).user
+        responseData = response
+      } else if ((response as any)?.data && typeof (response as any).data === 'object' && (response as any).data.id) {
+        user = (response as any).data
+        responseData = (response as any).data
+      } else if (response && typeof response === 'object' && (response as any).id) {
+        user = response
+        responseData = response
+      }
+      
+      console.log('Extracted updated user:', user)
+      
+      if (user && user.id) {
         setProfile(user)
         return responseData
       } else {
+        console.error('No valid user data found in update response:', response)
         throw new Error('No user data received from update API')
       }
     } catch (err: any) {
