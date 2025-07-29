@@ -4,7 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { KYCModel, CreateKYCDocumentData } from '../models/KYC';
+import { AdminNotificationsModel } from '../models/AdminNotifications';
 
 const router = express.Router();
 
@@ -44,9 +46,13 @@ const upload = multer({
 
 // Initialize database connection
 let db: Database.Database;
+let kycModel: KYCModel;
+let adminNotificationsModel: AdminNotificationsModel;
 
 export default function createKYCRoutes(database: Database.Database) {
   db = database;
+  kycModel = new KYCModel(database);
+  adminNotificationsModel = new AdminNotificationsModel(database);
 
   // GET /api/kyc/test - Test endpoint for mobile debugging
   router.get('/test', authenticateToken, (req, res) => {
@@ -65,6 +71,8 @@ export default function createKYCRoutes(database: Database.Database) {
       const { document_type } = req.body;
       const file = req.file;
 
+      console.log(`[KYC UPLOAD] User ${userId} uploading ${document_type}, file:`, file?.originalname);
+
       if (!file) {
         return res.status(400).json({
           success: false,
@@ -81,9 +89,8 @@ export default function createKYCRoutes(database: Database.Database) {
         });
       }
 
-      // Validate document type
-      const validTypes = ['id', 'passport', 'drivers_license', 'utility_bill', 'bank_statement'];
-      if (!validTypes.includes(document_type)) {
+      // Validate document type using model
+      if (!kycModel.isValidDocumentType(document_type)) {
         fs.unlinkSync(file.path);
         return res.status(400).json({
           success: false,
@@ -92,12 +99,7 @@ export default function createKYCRoutes(database: Database.Database) {
       }
 
       // Check if user already has this document type
-      const existingDoc = db.prepare(`
-        SELECT id FROM user_documents 
-        WHERE user_id = ? AND document_type = ? AND verification_status != 'rejected'
-      `).get(userId, document_type);
-
-      if (existingDoc) {
+      if (kycModel.hasDocumentType(userId, document_type)) {
         fs.unlinkSync(file.path);
         return res.status(400).json({
           success: false,
@@ -105,44 +107,33 @@ export default function createKYCRoutes(database: Database.Database) {
         });
       }
 
-      // Insert document record
-      const insertDoc = db.prepare(`
-        INSERT INTO user_documents (
-          user_id, document_type, file_path, file_name, file_size, verification_status
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `);
+      // Create document using model
+      const documentData: CreateKYCDocumentData = {
+        user_id: userId,
+        document_type: document_type as any,
+        file_path: file.path,
+        file_name: file.originalname,
+        file_size: file.size
+      };
 
-      const result = insertDoc.run(
-        userId,
-        document_type,
-        file.path,
-        file.originalname,
-        file.size,
-        'pending'
-      );
+      const document = kycModel.createDocument(documentData);
 
-      // Update user KYC status to under_review if this is their first document
-      const userDocs = db.prepare(`
-        SELECT COUNT(*) as count FROM user_documents 
-        WHERE user_id = ? AND verification_status != 'rejected'
-      `).get(userId) as { count: number };
-
-      if (userDocs.count === 1) {
-        db.prepare(`
-          UPDATE users SET kyc_status = 'under_review' WHERE id = ?
-        `).run(userId);
+      // Get user info for notification
+      const user = db.prepare('SELECT first_name, last_name, email FROM users WHERE id = ?').get(userId) as any;
+      
+      // Create admin notification
+      if (user) {
+        adminNotificationsModel.createKycSubmissionNotification(
+          userId, 
+          document_type
+        );
       }
 
-      // Get the created document
-      const document = db.prepare(`
-        SELECT * FROM user_documents WHERE id = ?
-      `).get(result.lastInsertRowid) as any;
-
-      console.log(`KYC document uploaded: User ${userId}, Type: ${document_type}, File: ${file.originalname}`);
+      console.log(`[KYC UPLOAD SUCCESS] User ${userId}, Document ID: ${document.id}, Type: ${document_type}`);
 
       res.json({
         success: true,
-        message: 'Document uploaded successfully',
+        message: 'Document uploaded successfully and is now pending review',
         document: {
           id: document.id,
           document_type: document.document_type,
@@ -154,14 +145,14 @@ export default function createKYCRoutes(database: Database.Database) {
       });
 
     } catch (error) {
-      console.error('KYC upload error:', error);
+      console.error('[KYC UPLOAD ERROR]:', error);
       
       // Clean up file if there was an error
       if (req.file) {
         try {
           fs.unlinkSync(req.file.path);
         } catch (unlinkError) {
-          console.error('Error cleaning up file:', unlinkError);
+          console.error('[KYC CLEANUP ERROR]:', unlinkError);
         }
       }
 
@@ -176,30 +167,23 @@ export default function createKYCRoutes(database: Database.Database) {
   router.get('/status', authenticateToken, (req, res) => {
     try {
       const userId = (req as any).user.userId;
+      
+      console.log(`[KYC STATUS] Getting status for user ${userId}`);
 
-      // Get user's KYC status
-      const user = db.prepare(`
-        SELECT kyc_status FROM users WHERE id = ?
-      `).get(userId) as { kyc_status: string };
-
-      // Get user's documents
-      const documents = db.prepare(`
-        SELECT 
-          id, document_type, file_name, file_size, verification_status, 
-          rejection_reason, uploaded_at, verified_at
-        FROM user_documents 
-        WHERE user_id = ?
-        ORDER BY uploaded_at DESC
-      `).all(userId);
+      const kycStatus = kycModel.getUserKYCStatus(userId);
 
       res.json({
         success: true,
-        status: user?.kyc_status || 'pending',
-        documents: documents || []
+        status: kycStatus.kyc_status,
+        documents: kycStatus.documents,
+        required_documents: kycStatus.required_documents,
+        missing_documents: kycStatus.missing_documents,
+        approved_documents: kycStatus.approved_documents,
+        rejected_documents: kycStatus.rejected_documents
       });
 
     } catch (error) {
-      console.error('Error fetching KYC status:', error);
+      console.error('[KYC STATUS ERROR]:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch KYC status'
@@ -208,36 +192,38 @@ export default function createKYCRoutes(database: Database.Database) {
   });
 
   // GET /api/kyc/documents - Get all user documents (for admin)
-  router.get('/documents', authenticateToken, (req, res) => {
+  router.get('/documents', authenticateToken, requireAdmin, (req, res) => {
     try {
-      const userId = (req as any).user.userId;
-      const userRole = (req as any).user.role;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const status = req.query.status as string;
+      const document_type = req.query.document_type as string;
 
-      if (userRole !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
-      }
+      console.log(`[KYC ADMIN] Getting documents with filters: status=${status}, type=${document_type}`);
 
-      const documents = db.prepare(`
-        SELECT 
-          ud.*,
-          u.email as user_email,
-          u.first_name,
-          u.last_name
-        FROM user_documents ud
-        JOIN users u ON ud.user_id = u.id
-        ORDER BY ud.uploaded_at DESC
-      `).all();
+      const documents = kycModel.getAllDocuments(limit, offset, {
+        status,
+        document_type
+      });
+
+      const total = kycModel.getDocumentCount({
+        status,
+        document_type
+      });
 
       res.json({
         success: true,
-        documents
+        documents,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + limit < total
+        }
       });
 
     } catch (error) {
-      console.error('Error fetching all documents:', error);
+      console.error('[KYC ADMIN DOCUMENTS ERROR]:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch documents'
@@ -246,19 +232,13 @@ export default function createKYCRoutes(database: Database.Database) {
   });
 
   // POST /api/kyc/verify/:documentId - Verify or reject a document (admin only)
-  router.post('/verify/:documentId', authenticateToken, (req, res) => {
+  router.post('/verify/:documentId', authenticateToken, requireAdmin, (req, res) => {
     try {
-      const adminId = (req as any).user.id;
-      const adminRole = (req as any).user.role;
+      const adminId = (req as any).user.userId;
       const documentId = parseInt(req.params.documentId);
       const { status, comments } = req.body;
 
-      if (adminRole !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
-      }
+      console.log(`[KYC VERIFY] Admin ${adminId} ${status} document ${documentId}`);
 
       if (!['approved', 'rejected'].includes(status)) {
         return res.status(400).json({
@@ -267,73 +247,62 @@ export default function createKYCRoutes(database: Database.Database) {
         });
       }
 
-      // Update document status
-      const updateDoc = db.prepare(`
-        UPDATE user_documents 
-        SET verification_status = ?, rejection_reason = ?, verified_at = CURRENT_TIMESTAMP, verified_by = ?
-        WHERE id = ?
-      `);
-
-      const result = updateDoc.run(
-        status,
-        status === 'rejected' ? comments : null,
-        adminId,
-        documentId
-      );
-
-      if (result.changes === 0) {
+      // Get document info before verification
+      const document = kycModel.getDocumentById(documentId);
+      if (!document) {
         return res.status(404).json({
           success: false,
           error: 'Document not found'
         });
       }
 
-      // Get document info to update user KYC status
-      const document = db.prepare(`
-        SELECT user_id, document_type FROM user_documents WHERE id = ?
-      `).get(documentId) as { user_id: number; document_type: string };
+      // Verify document using model
+      const success = kycModel.verifyDocument(documentId, status as any, adminId, comments);
 
-      if (document) {
-        // Check if user has all required documents approved
-        const requiredDocs = ['passport', 'utility_bill'];
-        const approvedDocs = db.prepare(`
-          SELECT document_type FROM user_documents 
-          WHERE user_id = ? AND verification_status = 'approved'
-        `).all(document.user_id) as { document_type: string }[];
-
-        const approvedTypes = approvedDocs.map(doc => doc.document_type);
-        const hasAllRequired = requiredDocs.every(type => approvedTypes.includes(type));
-
-        // Update user KYC status
-        let newKycStatus = 'under_review';
-        if (hasAllRequired) {
-          newKycStatus = 'approved';
-        } else {
-          // Check if any required documents are rejected
-          const rejectedDocs = db.prepare(`
-            SELECT document_type FROM user_documents 
-            WHERE user_id = ? AND verification_status = 'rejected' AND document_type IN (${requiredDocs.map(() => '?').join(',')})
-          `).all(document.user_id, ...requiredDocs) as { document_type: string }[];
-
-          if (rejectedDocs.length > 0) {
-            newKycStatus = 'rejected';
-          }
-        }
-
-        db.prepare(`
-          UPDATE users SET kyc_status = ? WHERE id = ?
-        `).run(newKycStatus, document.user_id);
+      if (!success) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to verify document'
+        });
       }
 
-      console.log(`Document ${documentId} ${status} by admin ${adminId}`);
+      // Create user notification about KYC status change
+      const updatedUserStatus = kycModel.getUserKYCStatus(document.user_id);
+      
+      // Get admin info for notification
+      const admin = db.prepare('SELECT first_name, last_name FROM users WHERE id = ?').get(adminId) as any;
+      const adminName = admin ? `${admin.first_name} ${admin.last_name}` : 'Admin';
+
+      // Create admin notification for successful verification
+      adminNotificationsModel.createNotification({
+        title: `KYC Document ${status}`,
+        message: `${document.document_type} document ${status} for ${document.user_first_name} ${document.user_last_name}`,
+        type: status === 'approved' ? 'success' : 'info',
+        category: 'kyc_submission',
+        target_user_id: document.user_id,
+        metadata: {
+          document_id: documentId,
+          document_type: document.document_type,
+          admin_id: adminId,
+          admin_name: adminName,
+          new_kyc_status: updatedUserStatus.kyc_status
+        }
+      });
+
+      console.log(`[KYC VERIFY SUCCESS] Document ${documentId} ${status}, User KYC status: ${updatedUserStatus.kyc_status}`);
 
       res.json({
         success: true,
-        message: `Document ${status} successfully`
+        message: `Document ${status} successfully`,
+        document: {
+          id: documentId,
+          status: status,
+          user_kyc_status: updatedUserStatus.kyc_status
+        }
       });
 
     } catch (error) {
-      console.error('Error verifying document:', error);
+      console.error('[KYC VERIFY ERROR]:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to verify document'
@@ -342,21 +311,13 @@ export default function createKYCRoutes(database: Database.Database) {
   });
 
   // GET /api/kyc/download/:documentId - Download document file (admin only)
-  router.get('/download/:documentId', authenticateToken, (req, res) => {
+  router.get('/download/:documentId', authenticateToken, requireAdmin, (req, res) => {
     try {
-      const userRole = (req as any).user.role;
       const documentId = parseInt(req.params.documentId);
+      
+      console.log(`[KYC DOWNLOAD] Admin downloading document ${documentId}`);
 
-      if (userRole !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
-      }
-
-      const document = db.prepare(`
-        SELECT file_path, file_name FROM user_documents WHERE id = ?
-      `).get(documentId) as { file_path: string; file_name: string };
+      const document = kycModel.getDocumentById(documentId);
 
       if (!document) {
         return res.status(404).json({
@@ -375,10 +336,55 @@ export default function createKYCRoutes(database: Database.Database) {
       res.download(document.file_path, document.file_name);
 
     } catch (error) {
-      console.error('Error downloading document:', error);
+      console.error('[KYC DOWNLOAD ERROR]:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to download document'
+      });
+    }
+  });
+
+  // GET /api/kyc/stats - Get KYC statistics (admin only)
+  router.get('/stats', authenticateToken, requireAdmin, (req, res) => {
+    try {
+      console.log('[KYC STATS] Getting KYC statistics');
+
+      const stats = kycModel.getKYCStats();
+
+      res.json({
+        success: true,
+        stats
+      });
+
+    } catch (error) {
+      console.error('[KYC STATS ERROR]:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch KYC statistics'
+      });
+    }
+  });
+
+  // GET /api/kyc/pending - Get pending documents for admin dashboard (admin only)
+  router.get('/pending', authenticateToken, requireAdmin, (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      console.log(`[KYC PENDING] Getting ${limit} pending documents`);
+
+      const pendingDocuments = kycModel.getPendingDocuments(limit);
+
+      res.json({
+        success: true,
+        documents: pendingDocuments,
+        count: pendingDocuments.length
+      });
+
+    } catch (error) {
+      console.error('[KYC PENDING ERROR]:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch pending documents'
       });
     }
   });

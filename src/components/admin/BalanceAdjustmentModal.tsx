@@ -208,7 +208,6 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                       ${(() => {
                         const currentUser = availableUsers.find(u => u.id === selectedUser.id);
                         const currentBalance = currentUser?.total_balance || selectedUser.total_balance || 0;
-                        console.log('Debug selected user balance:', selectedUser.id, currentBalance, currentUser);
                         return currentBalance.toLocaleString();
                       })()}
                     </p>
@@ -312,7 +311,6 @@ export const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({
                   ${(() => {
                     const currentUser = availableUsers.find(u => u.id === selectedUser?.id);
                     const currentBalance = currentUser?.total_balance || selectedUser?.total_balance || 0;
-                    console.log('Debug balance for user', selectedUser?.id, ':', currentBalance, 'from', currentUser || selectedUser);
                     return currentBalance.toLocaleString();
                   })()}
                 </span>

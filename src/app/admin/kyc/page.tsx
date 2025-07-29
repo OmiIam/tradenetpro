@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Search, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Eye, Download, User, Clock } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AdminProvider, useAdmin, AdminKycDocument } from '@/contexts/AdminContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -75,7 +75,14 @@ function KycPageContent() {
       render: (_: any, doc: AdminKycDocument) => (
         <div>
           <p className="font-semibold capitalize">{doc.document_type.replace('_', ' ')}</p>
-          <p className="text-sm text-gray-400">User: {doc.user_id}</p>
+          <p className="text-sm text-gray-400">
+            {doc.user_first_name && doc.user_last_name 
+              ? `${doc.user_first_name} ${doc.user_last_name}` 
+              : `User: ${doc.user_id}`}
+          </p>
+          {doc.user_email && (
+            <p className="text-xs text-gray-500">{doc.user_email}</p>
+          )}
         </div>
       )
     },
@@ -88,9 +95,10 @@ function KycPageContent() {
           status === 'approved' ? 'bg-green-900/20 text-green-400' :
           status === 'pending' ? 'bg-yellow-900/20 text-yellow-400' :
           status === 'rejected' ? 'bg-red-900/20 text-red-400' :
+          status === 'under_review' ? 'bg-blue-900/20 text-blue-400' :
           'bg-gray-900/20 text-gray-400'
         }`}>
-          {status}
+          {status === 'under_review' ? 'Under Review' : status}
         </span>
       )
     },
@@ -127,6 +135,7 @@ function KycPageContent() {
               options={[
                 { value: '', label: 'All Statuses' },
                 { value: 'pending', label: 'Pending' },
+                { value: 'under_review', label: 'Under Review' },
                 { value: 'approved', label: 'Approved' },
                 { value: 'rejected', label: 'Rejected' }
               ]}
@@ -177,33 +186,105 @@ function KycPageContent() {
         {reviewingDoc && (
           <div className="space-y-6">
             <div className="space-y-4">
+              {/* User Information */}
+              <div className="bg-slate-800 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <User className="w-5 h-5 text-blue-400" />
+                  <h4 className="font-semibold text-white">User Information</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-400">Name:</span>
+                    <p className="text-white">
+                      {reviewingDoc.user_first_name && reviewingDoc.user_last_name 
+                        ? `${reviewingDoc.user_first_name} ${reviewingDoc.user_last_name}` 
+                        : 'Not provided'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Email:</span>
+                    <p className="text-white">{reviewingDoc.user_email || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">User ID:</span>
+                    <p className="text-white">{reviewingDoc.user_id}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Details */}
               <div>
-                <h4 className="font-semibold text-white">Document Details</h4>
-                <div className="mt-2 space-y-2 text-sm">
+                <h4 className="font-semibold text-white mb-3">Document Details</h4>
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Type:</span>
                     <span className="text-white capitalize">{reviewingDoc.document_type.replace('_', ' ')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">User ID:</span>
-                    <span className="text-white">{reviewingDoc.user_id}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-gray-400">Status:</span>
-                    <span className="text-white capitalize">{reviewingDoc.status}</span>
+                    <span className={`capitalize ${
+                      reviewingDoc.status === 'approved' ? 'text-green-400' :
+                      reviewingDoc.status === 'pending' ? 'text-yellow-400' :
+                      reviewingDoc.status === 'rejected' ? 'text-red-400' :
+                      reviewingDoc.status === 'under_review' ? 'text-blue-400' :
+                      'text-gray-400'
+                    }`}>
+                      {reviewingDoc.status === 'under_review' ? 'Under Review' : reviewingDoc.status}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Submitted:</span>
-                    <span className="text-white">{new Date(reviewingDoc.submitted_at).toLocaleDateString()}</span>
+                    <span className="text-white flex items-center space-x-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{new Date(reviewingDoc.submitted_at).toLocaleDateString()}</span>
+                    </span>
                   </div>
+                  {reviewingDoc.reviewed_at && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Reviewed:</span>
+                      <span className="text-white">{new Date(reviewingDoc.reviewed_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {reviewingDoc.reviewed_by && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Reviewed by:</span>
+                      <span className="text-white">{reviewingDoc.reviewed_by}</span>
+                    </div>
+                  )}
+                  {reviewingDoc.rejection_reason && (
+                    <div className="mt-3">
+                      <span className="text-gray-400">Rejection Reason:</span>
+                      <p className="text-red-400 mt-1 p-2 bg-red-900/20 rounded">{reviewingDoc.rejection_reason}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Document Actions */}
               <div className="bg-slate-800 rounded-lg p-4">
-                <Button variant="outline" className="w-full flex items-center space-x-2">
-                  <Eye className="w-4 h-4" />
-                  <span>View Document</span>
-                </Button>
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 flex items-center justify-center space-x-2"
+                    onClick={() => window.open(reviewingDoc.document_url, '_blank')}
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>View Document</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 flex items-center justify-center space-x-2"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = reviewingDoc.document_url;
+                      link.download = `${reviewingDoc.document_type}_${reviewingDoc.user_id}.pdf`;
+                      link.click();
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download</span>
+                  </Button>
+                </div>
               </div>
 
               {reviewingDoc.status === 'pending' && (

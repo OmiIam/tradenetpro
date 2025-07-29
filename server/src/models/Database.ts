@@ -67,6 +67,9 @@ export class DatabaseManager {
         notification_email BOOLEAN DEFAULT TRUE,
         notification_push BOOLEAN DEFAULT TRUE,
         notification_sms BOOLEAN DEFAULT FALSE,
+        bitcoin_address TEXT,
+        ethereum_address TEXT,
+        usdt_address TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_login DATETIME,
@@ -249,6 +252,61 @@ export class DatabaseManager {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // System settings table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE NOT NULL,
+        value TEXT NOT NULL,
+        description TEXT,
+        type TEXT DEFAULT 'string' CHECK (type IN ('string', 'number', 'boolean', 'json')),
+        category TEXT DEFAULT 'general' CHECK (category IN ('general', 'appearance', 'email', 'security', 'trading', 'maintenance')),
+        is_public BOOLEAN DEFAULT FALSE,
+        updated_by INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Admin notifications table (for admin panel activity feed)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS admin_notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type TEXT DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error', 'user_activity')),
+        category TEXT DEFAULT 'general' CHECK (category IN ('general', 'user_signup', 'kyc_submission', 'transaction', 'system')),
+        read BOOLEAN DEFAULT FALSE,
+        action_url TEXT,
+        metadata TEXT, -- JSON data
+        target_user_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        read_at DATETIME,
+        FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // User bans/suspensions table with expiration support
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_suspensions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('suspension', 'ban')),
+        reason TEXT NOT NULL,
+        admin_id INTEGER NOT NULL,
+        starts_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME,
+        is_permanent BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE RESTRICT
+      )
+    `);
   }
 
   private createIndexes() {
@@ -274,6 +332,13 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
       CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON user_notifications(user_id);
       CREATE INDEX IF NOT EXISTS idx_user_notifications_read ON user_notifications(read);
+      CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key);
+      CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(category);
+      CREATE INDEX IF NOT EXISTS idx_admin_notifications_read ON admin_notifications(read);
+      CREATE INDEX IF NOT EXISTS idx_admin_notifications_category ON admin_notifications(category);
+      CREATE INDEX IF NOT EXISTS idx_user_suspensions_user_id ON user_suspensions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_suspensions_active ON user_suspensions(is_active);
+      CREATE INDEX IF NOT EXISTS idx_user_suspensions_expires ON user_suspensions(expires_at);
     `);
   }
 
@@ -367,6 +432,41 @@ export class DatabaseManager {
       
       console.log('Default test user created: testuser@trade.im / testpass123');
     }
+
+    // Create default system settings
+    this.createDefaultSettings();
+  }
+
+  private createDefaultSettings() {
+    const defaultSettings = [
+      { key: 'site_title', value: 'TradeIM', description: 'Site title displayed in header', category: 'general', is_public: true },
+      { key: 'site_description', value: 'Advanced Trading Platform', description: 'Site description for meta tags', category: 'general', is_public: true },
+      { key: 'maintenance_mode', value: 'false', description: 'Enable maintenance mode', type: 'boolean', category: 'maintenance', is_public: true },
+      { key: 'maintenance_message', value: 'We are currently performing scheduled maintenance. Please check back soon.', description: 'Message shown during maintenance', category: 'maintenance', is_public: true },
+      { key: 'email_sender_name', value: 'TradeIM Support', description: 'Name used in outgoing emails', category: 'email', is_public: false },
+      { key: 'email_sender_address', value: 'noreply@trade.im', description: 'Email address used for outgoing emails', category: 'email', is_public: false },
+      { key: 'new_user_notifications', value: 'true', description: 'Send notifications for new user registrations', type: 'boolean', category: 'general', is_public: false },
+      { key: 'kyc_auto_approve', value: 'false', description: 'Automatically approve KYC documents', type: 'boolean', category: 'security', is_public: false },
+      { key: 'max_login_attempts', value: '5', description: 'Maximum login attempts before lockout', type: 'number', category: 'security', is_public: false },
+      { key: 'session_timeout', value: '24', description: 'Session timeout in hours', type: 'number', category: 'security', is_public: false }
+    ];
+
+    defaultSettings.forEach(setting => {
+      const exists = this.db.prepare('SELECT id FROM system_settings WHERE key = ?').get(setting.key);
+      if (!exists) {
+        this.db.prepare(`
+          INSERT INTO system_settings (key, value, description, type, category, is_public)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(
+          setting.key,
+          setting.value,
+          setting.description,
+          setting.type || 'string',
+          setting.category,
+          setting.is_public ? 1 : 0
+        );
+      }
+    });
   }
 
   public static getInstance(): DatabaseManager {

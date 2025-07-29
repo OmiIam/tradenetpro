@@ -24,7 +24,7 @@ interface KycDocument {
   user_email: string;
   document_type: 'passport' | 'drivers_license' | 'national_id' | 'utility_bill';
   document_url: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'under_review';
   submitted_at: string;
   reviewed_at?: string;
   reviewer_id?: number;

@@ -114,7 +114,10 @@ export class UserController {
         notification_email,
         notification_push,
         notification_sms,
-        two_factor_enabled
+        two_factor_enabled,
+        bitcoin_address,
+        ethereum_address,
+        usdt_address
       } = req.body;
 
       // Check if email is already taken by another user
@@ -144,6 +147,9 @@ export class UserController {
       if (notification_push !== undefined) updateData.notification_push = notification_push;
       if (notification_sms !== undefined) updateData.notification_sms = notification_sms;
       if (two_factor_enabled !== undefined) updateData.two_factor_enabled = two_factor_enabled;
+      if (bitcoin_address !== undefined) updateData.bitcoin_address = bitcoin_address;
+      if (ethereum_address !== undefined) updateData.ethereum_address = ethereum_address;
+      if (usdt_address !== undefined) updateData.usdt_address = usdt_address;
 
       const updatedUser = this.userModel.updateUser(userId, updateData);
 

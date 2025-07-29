@@ -32,6 +32,7 @@ import StatCard from '@/components/admin/StatCard';
 import BalanceAdjustmentModal from '@/components/admin/BalanceAdjustmentModal';
 import UserStatusToggle from '@/components/admin/UserStatusToggle';
 import KycVerificationPanel from '@/components/admin/KycVerificationPanel';
+import KYCStatsCard from '@/components/admin/KYCStatsCard';
 import AuditLog, { AuditLogEntry } from '@/components/admin/AuditLog';
 import { adminApi, AdminMetadata, BackendUser } from '@/lib/admin-api';
 import { ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
@@ -68,7 +69,7 @@ interface KycDocument {
   user_email: string;
   document_type: 'passport' | 'drivers_license' | 'national_id' | 'utility_bill';
   document_url: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'under_review';
   submitted_at: string;
   reviewed_at?: string;
   reviewer_id?: number;
@@ -128,7 +129,6 @@ function AdminOverviewContent() {
         }));
         
         setUsers(transformedUsers);
-        console.log('✅ Successfully fetched users with portfolio data:', transformedUsers.length);
         
         // Fetch other data in parallel
         const [kycResponse, auditResponse] = await Promise.allSettled([
@@ -166,7 +166,7 @@ function AdminOverviewContent() {
         }
         
       } catch (optimizedError) {
-        console.warn('⚠️ Optimized endpoint failed, falling back to individual fetches:', optimizedError);
+        console.warn('Optimized endpoint failed, falling back to individual fetches:', optimizedError);
         
         // Fallback to original method
         const [usersResponse, kycResponse, auditResponse] = await Promise.allSettled([
@@ -308,9 +308,8 @@ function AdminOverviewContent() {
       try {
         const adjustmentType = type === 'add' ? 'credit' : 'debit';
         await adminApi.adjustBalance(userId, amount, adjustmentType, reason);
-        console.log('✅ Balance adjustment successful via API');
       } catch (apiError) {
-        console.warn('⚠️ API balance adjustment failed, updating local state only:', apiError);
+        console.warn('API balance adjustment failed, updating local state only:', apiError);
         
         // Fallback: Update local state for demo purposes
         const newBalance = type === 'add' 
@@ -344,7 +343,7 @@ function AdminOverviewContent() {
           });
         }
       } catch (auditError) {
-        console.warn('⚠️ Audit log creation failed:', auditError);
+        console.warn('Audit log creation failed:', auditError);
         
         // Fallback: Add to local audit entries for demo
         const newAuditEntry = {
@@ -367,7 +366,7 @@ function AdminOverviewContent() {
       forceSync();
       
     } catch (error) {
-      console.error('❌ Balance adjustment failed:', error);
+      console.error('Balance adjustment failed:', error);
       throw error;
     }
   };
@@ -683,6 +682,30 @@ function AdminOverviewContent() {
             </div>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* KYC Overview Stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+      >
+        <KYCStatsCard 
+          stats={{
+            pending: kycDocuments.filter(doc => doc.status === 'pending').length,
+            under_review: kycDocuments.filter(doc => doc.status === 'under_review').length || 0,
+            approved: kycDocuments.filter(doc => doc.status === 'approved').length,
+            rejected: kycDocuments.filter(doc => doc.status === 'rejected').length,
+            total_documents: kycDocuments.length,
+            recent_submissions: kycDocuments.filter(doc => {
+              const submitDate = new Date(doc.submitted_at);
+              const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+              return submitDate > oneDayAgo;
+            }).length,
+            processing_time_avg: 2 // Mock value - would be calculated from actual data
+          }}
+          loading={isSyncing && kycDocuments.length === 0}
+        />
       </motion.div>
 
       {/* System Status & Recent Activity - keeping existing code */}
@@ -1248,7 +1271,6 @@ function AdminOverviewContent() {
         onAdjustBalance={handleBalanceAdjustment}
         availableUsers={users.map(user => {
           const balance = user.total_balance || 0;
-          console.log('Modal user data:', user.id, user.first_name, 'balance:', balance);
           return {
             id: user.id,
             first_name: user.first_name,

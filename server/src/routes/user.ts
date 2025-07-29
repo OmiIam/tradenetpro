@@ -121,6 +121,21 @@ export default function createUserRoutes(database: DatabaseManager) {
       .optional()
       .isBoolean()
       .withMessage('Two factor authentication setting must be a boolean'),
+    body('bitcoin_address')
+      .optional()
+      .trim()
+      .matches(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/)
+      .withMessage('Invalid Bitcoin address format'),
+    body('ethereum_address')
+      .optional()
+      .trim()
+      .matches(/^0x[a-fA-F0-9]{40}$/)
+      .withMessage('Invalid Ethereum address format'),
+    body('usdt_address')
+      .optional()
+      .trim()
+      .isLength({ min: 25, max: 50 })
+      .withMessage('USDT address must be between 25 and 50 characters'),
   ], async (req: express.Request, res: express.Response) => {
     await userController.updateProfile(req, res);
   });

@@ -76,7 +76,13 @@ export const adminApi = {
   // Dashboard stats
   async getStats(): Promise<BackendAdminStats> {
     const response = await apiClient.get<BackendAdminStats>('/api/admin/stats');
-    return response.data || response as BackendAdminStats;
+    const data = response.data || response as BackendAdminStats;
+    
+    // Handle nested data structure if it exists
+    if ((data as any).data) {
+      return (data as any).data;
+    }
+    return data;
   },
 
   // User management

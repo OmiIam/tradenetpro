@@ -12,6 +12,7 @@ import createDebugRoutes from './routes/debug';
 import proxyRoutes from './routes/proxy';
 import healthRoutes from './routes/health';
 import marketRoutes from './routes/market';
+import createKYCRoutes from './routes/kyc';
 
 // Load environment variables
 dotenv.config();
@@ -182,7 +183,9 @@ if (useRemoteApi) {
   app.use('/api/verification', verificationRoutes);
   app.use('/api/debug', createDebugRoutes(database!));
   app.use('/api/market', marketRoutes);
+  app.use('/api/kyc', createKYCRoutes(database!.getDatabase()));
   console.log('[SERVER] Market data routes registered at /api/market');
+  console.log('[SERVER] KYC routes registered at /api/kyc');
 }
 
 // Health routes are available regardless of proxy mode
@@ -262,6 +265,19 @@ app.get('/api', (req, res) => {
           'GET /status/:userId - Get user verification status',
           'POST /admin/verify-user-email - Admin verify user email',
           'POST /admin/cleanup-tokens - Cleanup expired tokens'
+        ]
+      },
+      kyc: {
+        base: '/api/kyc',
+        routes: [
+          'GET /test - Test KYC endpoint accessibility',
+          'POST /upload - Upload KYC document',
+          'GET /status - Get user KYC status and documents',
+          'GET /documents - Get all KYC documents with pagination (admin only)',
+          'POST /verify/:documentId - Verify or reject document (admin only)',
+          'GET /download/:documentId - Download document file (admin only)',
+          'GET /stats - Get KYC statistics (admin only)',
+          'GET /pending - Get pending documents for review (admin only)'
         ]
       }
     }

@@ -73,6 +73,9 @@ export interface UpdateUserData {
   notification_email?: boolean;
   notification_push?: boolean;
   notification_sms?: boolean;
+  bitcoin_address?: string;
+  ethereum_address?: string;
+  usdt_address?: string;
 }
 
 export class UserModel {
@@ -339,6 +342,20 @@ export class UserModel {
     if (userData.two_factor_enabled !== undefined) {
       updateFields.push('two_factor_enabled = ?');
       values.push(userData.two_factor_enabled);
+    }
+
+    // Wallet addresses
+    if (userData.bitcoin_address !== undefined) {
+      updateFields.push('bitcoin_address = ?');
+      values.push(userData.bitcoin_address);
+    }
+    if (userData.ethereum_address !== undefined) {
+      updateFields.push('ethereum_address = ?');
+      values.push(userData.ethereum_address);
+    }
+    if (userData.usdt_address !== undefined) {
+      updateFields.push('usdt_address = ?');
+      values.push(userData.usdt_address);
     }
 
     if (updateFields.length === 0) {

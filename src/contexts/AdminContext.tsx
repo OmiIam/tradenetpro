@@ -35,12 +35,15 @@ export interface AdminKycDocument {
   id: string;
   user_id: string;
   document_type: 'passport' | 'driver_license' | 'national_id' | 'utility_bill';
-  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'under_review';
   submitted_at: string;
   reviewed_at?: string;
   reviewed_by?: string;
   rejection_reason?: string;
   document_url: string;
+  user_email?: string;
+  user_first_name?: string;
+  user_last_name?: string;
 }
 
 export interface AdminLog {
@@ -559,7 +562,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         activeUsers: response.users?.active || 0,
         totalTransactions: response.transactions?.total || 0,
         transactionVolume: response.transactions?.totalVolume || 0,
-        pendingKyc: 0, // Will be implemented when KYC endpoint is ready
+        pendingKyc: response.kyc?.pending || 0,
         systemHealth: 'healthy' as const
       };
       

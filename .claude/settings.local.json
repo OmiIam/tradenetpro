@@ -16,7 +16,8 @@
       "Bash(mkdir:*)",
       "Bash(rm:*)",
       "Bash(pkill:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

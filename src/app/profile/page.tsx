@@ -29,6 +29,13 @@ export default function ProfilePage() {
     postalCode: '',
   });
 
+  // Wallet addresses state
+  const [walletData, setWalletData] = useState({
+    bitcoinAddress: '',
+    ethereumAddress: '',
+    usdtAddress: '',
+  });
+
   // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
@@ -45,6 +52,12 @@ export default function ProfilePage() {
         city: profile.city || '',
         state: profile.state || '',
         postalCode: profile.postal_code || '',
+      });
+
+      setWalletData({
+        bitcoinAddress: profile.bitcoin_address || '',
+        ethereumAddress: profile.ethereum_address || '',
+        usdtAddress: profile.usdt_address || '',
       });
     }
   }, [profile]);
@@ -115,6 +128,12 @@ export default function ProfilePage() {
       } else if (activeTab === 'security') {
         updateData = {
           two_factor_enabled: securityData.twoFactorEnabled,
+        };
+      } else if (activeTab === 'payment') {
+        updateData = {
+          bitcoin_address: walletData.bitcoinAddress,
+          ethereum_address: walletData.ethereumAddress,
+          usdt_address: walletData.usdtAddress,
         };
       }
 
@@ -527,47 +546,86 @@ export default function ProfilePage() {
               <div>
                 <h2 className="text-2xl font-semibold text-white mb-6">Payment Methods</h2>
                 
-                <div className="space-y-6">
+                <form onSubmit={handleSave} className="space-y-6">
                   <div className="border border-white/10 rounded-lg p-6">
                     <h3 className="text-lg font-semibold text-white mb-4">Cryptocurrency Wallets</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                        <div className="flex items-center space-x-3">
+                    <div className="space-y-4">
+                      <div className="border border-white/10 rounded-lg p-4">
+                        <div className="flex items-center space-x-3 mb-3">
                           <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
                             <span className="text-black text-sm font-bold">₿</span>
                           </div>
-                          <div>
-                            <div className="text-white font-medium">Bitcoin</div>
-                            <div className="text-gray-400 text-sm">bc1q...placeholder</div>
-                          </div>
+                          <div className="text-white font-medium">Bitcoin Address</div>
                         </div>
-                        <div className="text-green-400 text-sm">Connected</div>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                          placeholder="Enter your Bitcoin address (bc1... or 1... or 3...)"
+                          value={walletData.bitcoinAddress}
+                          onChange={(e) => setWalletData({...walletData, bitcoinAddress: e.target.value})}
+                        />
+                        {walletData.bitcoinAddress && (
+                          <div className="mt-2 text-xs text-gray-400 break-all">
+                            Current: {walletData.bitcoinAddress}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                        <div className="flex items-center space-x-3">
+                      
+                      <div className="border border-white/10 rounded-lg p-4">
+                        <div className="flex items-center space-x-3 mb-3">
                           <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center">
                             <span className="text-white text-sm font-bold">Ξ</span>
                           </div>
-                          <div>
-                            <div className="text-white font-medium">Ethereum</div>
-                            <div className="text-gray-400 text-sm">0x...placeholder</div>
-                          </div>
+                          <div className="text-white font-medium">Ethereum Address</div>
                         </div>
-                        <div className="text-green-400 text-sm">Connected</div>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                          placeholder="Enter your Ethereum address (0x...)"
+                          value={walletData.ethereumAddress}
+                          onChange={(e) => setWalletData({...walletData, ethereumAddress: e.target.value})}
+                        />
+                        {walletData.ethereumAddress && (
+                          <div className="mt-2 text-xs text-gray-400 break-all">
+                            Current: {walletData.ethereumAddress}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                        <div className="flex items-center space-x-3">
+                      
+                      <div className="border border-white/10 rounded-lg p-4">
+                        <div className="flex items-center space-x-3 mb-3">
                           <div className="w-8 h-8 bg-green-400 rounded-full flex items-center justify-center">
                             <span className="text-white text-sm font-bold">₮</span>
                           </div>
-                          <div>
-                            <div className="text-white font-medium">USDT (Tether)</div>
-                            <div className="text-gray-400 text-sm">TR7N...placeholder</div>
-                          </div>
+                          <div className="text-white font-medium">USDT Address</div>
                         </div>
-                        <div className="text-green-400 text-sm">Connected</div>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                          placeholder="Enter your USDT address (TR... or 0x...)"
+                          value={walletData.usdtAddress}
+                          onChange={(e) => setWalletData({...walletData, usdtAddress: e.target.value})}
+                        />
+                        {walletData.usdtAddress && (
+                          <div className="mt-2 text-xs text-gray-400 break-all">
+                            Current: {walletData.usdtAddress}
+                          </div>
+                        )}
                       </div>
                     </div>
+                    
+                    <button
+                      type="submit"
+                      className="mt-4 w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      ) : (
+                        <Save className="w-5 h-5 mr-2" />
+                      )}
+                      Save Wallet Addresses
+                    </button>
                   </div>
 
                   <div className="border border-white/10 rounded-lg p-6">
@@ -580,7 +638,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </form>
               </div>
             )}
 

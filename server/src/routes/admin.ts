@@ -48,6 +48,11 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.getDashboardStats(req, res);
   });
 
+  // Admin metadata endpoint
+  router.get('/me', async (req: express.Request, res: express.Response) => {
+    await adminController.getAdminMetadata(req, res);
+  });
+
   // Debug endpoint to list all available admin routes
   router.get('/routes', (req: express.Request, res: express.Response) => {
     const routes = [
@@ -71,7 +76,38 @@ export default function createAdminRoutes(database: DatabaseManager) {
       'GET /api/admin/kyc/documents',
       'GET /api/admin/kyc/documents/:documentId',
       'POST /api/admin/kyc/documents/:documentId/verify',
-      'GET /api/admin/kyc/documents/:documentId/download'
+      'GET /api/admin/kyc/documents/:documentId/download',
+      'GET /api/admin/audit-logs',
+      'POST /api/admin/audit-logs',
+      'GET /api/admin/suspensions',
+      'GET /api/admin/suspensions/stats',
+      'POST /api/admin/suspensions/process-expired',
+      'GET /api/admin/suspensions/:suspensionId',
+      'POST /api/admin/suspensions',
+      'PUT /api/admin/suspensions/:suspensionId',
+      'POST /api/admin/suspensions/:suspensionId/lift',
+      'DELETE /api/admin/suspensions/:suspensionId',
+      'GET /api/admin/users/:userId/suspension',
+      'GET /api/admin/notifications',
+      'GET /api/admin/notifications/stats',
+      'GET /api/admin/notifications/unread-count',
+      'GET /api/admin/notifications/categories',
+      'POST /api/admin/notifications/cleanup',
+      'GET /api/admin/notifications/:notificationId',
+      'POST /api/admin/notifications',
+      'PUT /api/admin/notifications/:notificationId',
+      'POST /api/admin/notifications/:notificationId/mark-read',
+      'POST /api/admin/notifications/mark-multiple-read',
+      'POST /api/admin/notifications/mark-all-read',
+      'DELETE /api/admin/notifications/:notificationId',
+      'GET /api/admin/settings',
+      'GET /api/admin/settings/public',
+      'GET /api/admin/settings/categories',
+      'GET /api/admin/settings/:key',
+      'POST /api/admin/settings',
+      'PUT /api/admin/settings/:key',
+      'POST /api/admin/settings/bulk',
+      'DELETE /api/admin/settings/:key'
     ];
     
     res.json({
@@ -87,9 +123,13 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.getAllUsers(req, res);
   });
 
+  // User search endpoint
+  router.get('/users/search', async (req: express.Request, res: express.Response) => {
+    await adminController.searchUsers(req, res);
+  });
+
   // Optimized endpoint that includes portfolio data to avoid N+1 queries
   router.get('/users-with-portfolios', validatePagination, async (req: express.Request, res: express.Response) => {
-    console.log(`[ADMIN] Route handler for /users-with-portfolios called`);
     await adminController.getAllUsersWithPortfolios(req, res);
   });
 
@@ -149,6 +189,11 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.getKYCStats(req, res);
   });
 
+  // KYC alias endpoint for frontend compatibility
+  router.get('/kyc', validatePagination, async (req: express.Request, res: express.Response) => {
+    await adminController.getAllKYCDocuments(req, res);
+  });
+
   router.get('/kyc/documents', validatePagination, async (req: express.Request, res: express.Response) => {
     await adminController.getAllKYCDocuments(req, res);
   });
@@ -165,6 +210,134 @@ export default function createAdminRoutes(database: DatabaseManager) {
     await adminController.downloadKYCDocument(req, res);
   });
 
-  console.log(`[ADMIN] Admin routes registered successfully, including KYC management and /users-with-portfolios`);
+  // Audit Logs Management
+  router.get('/audit-logs', validatePagination, async (req: express.Request, res: express.Response) => {
+    await adminController.getAuditLogs(req, res);
+  });
+
+  router.post('/audit-logs', async (req: express.Request, res: express.Response) => {
+    await adminController.createAuditLog(req, res);
+  });
+
+  // User Suspension/Ban Management Routes
+  router.get('/suspensions', validatePagination, async (req: express.Request, res: express.Response) => {
+    await adminController.getSuspensions(req, res);
+  });
+
+  router.get('/suspensions/stats', async (req: express.Request, res: express.Response) => {
+    await adminController.getSuspensionStats(req, res);
+  });
+
+  router.post('/suspensions/process-expired', async (req: express.Request, res: express.Response) => {
+    await adminController.processExpiredSuspensions(req, res);
+  });
+
+  router.get('/suspensions/:suspensionId', async (req: express.Request, res: express.Response) => {
+    await adminController.getSuspension(req, res);
+  });
+
+  router.post('/suspensions', async (req: express.Request, res: express.Response) => {
+    await adminController.createSuspension(req, res);
+  });
+
+  router.put('/suspensions/:suspensionId', async (req: express.Request, res: express.Response) => {
+    await adminController.updateSuspension(req, res);
+  });
+
+  router.post('/suspensions/:suspensionId/lift', async (req: express.Request, res: express.Response) => {
+    await adminController.liftSuspension(req, res);
+  });
+
+  router.delete('/suspensions/:suspensionId', async (req: express.Request, res: express.Response) => {
+    await adminController.deleteSuspension(req, res);
+  });
+
+  router.get('/users/:userId/suspension', async (req: express.Request, res: express.Response) => {
+    await adminController.getUserActiveSuspension(req, res);
+  });
+
+  // Admin Notifications Management Routes
+  router.get('/notifications', validatePagination, async (req: express.Request, res: express.Response) => {
+    await adminController.getNotifications(req, res);
+  });
+
+  router.get('/notifications/stats', async (req: express.Request, res: express.Response) => {
+    await adminController.getNotificationStats(req, res);
+  });
+
+  router.get('/notifications/unread-count', async (req: express.Request, res: express.Response) => {
+    await adminController.getUnreadNotificationCount(req, res);
+  });
+
+  router.get('/notifications/categories', async (req: express.Request, res: express.Response) => {
+    await adminController.getNotificationsByCategory(req, res);
+  });
+
+  router.post('/notifications/cleanup', async (req: express.Request, res: express.Response) => {
+    await adminController.cleanupOldNotifications(req, res);
+  });
+
+  router.get('/notifications/:notificationId', async (req: express.Request, res: express.Response) => {
+    await adminController.getNotification(req, res);
+  });
+
+  router.post('/notifications', async (req: express.Request, res: express.Response) => {
+    await adminController.createNotification(req, res);
+  });
+
+  router.put('/notifications/:notificationId', async (req: express.Request, res: express.Response) => {
+    await adminController.updateNotification(req, res);
+  });
+
+  router.post('/notifications/:notificationId/mark-read', async (req: express.Request, res: express.Response) => {
+    await adminController.markNotificationAsRead(req, res);
+  });
+
+  router.post('/notifications/mark-multiple-read', async (req: express.Request, res: express.Response) => {
+    await adminController.markMultipleNotificationsAsRead(req, res);
+  });
+
+  router.post('/notifications/mark-all-read', async (req: express.Request, res: express.Response) => {
+    await adminController.markAllNotificationsAsRead(req, res);
+  });
+
+  router.delete('/notifications/:notificationId', async (req: express.Request, res: express.Response) => {
+    await adminController.deleteNotification(req, res);
+  });
+
+  // System Settings Management Routes
+  router.get('/settings', async (req: express.Request, res: express.Response) => {
+    await adminController.getSettings(req, res);
+  });
+
+  router.get('/settings/public', async (req: express.Request, res: express.Response) => {
+    await adminController.getPublicSettings(req, res);
+  });
+
+  router.get('/settings/categories', async (req: express.Request, res: express.Response) => {
+    await adminController.getSettingsByCategory(req, res);
+  });
+
+  router.get('/settings/:key', async (req: express.Request, res: express.Response) => {
+    await adminController.getSetting(req, res);
+  });
+
+  router.post('/settings', async (req: express.Request, res: express.Response) => {
+    await adminController.createSetting(req, res);
+  });
+
+  router.put('/settings/:key', async (req: express.Request, res: express.Response) => {
+    await adminController.updateSetting(req, res);
+  });
+
+  router.post('/settings/bulk', async (req: express.Request, res: express.Response) => {
+    await adminController.updateMultipleSettings(req, res);
+  });
+
+  router.delete('/settings/:key', async (req: express.Request, res: express.Response) => {
+    await adminController.deleteSetting(req, res);
+  });
+
+  console.log(`[ADMIN] Admin routes registered successfully, including KYC management, /users-with-portfolios, system settings, user suspensions, and admin notifications`);
   return router;
 }
