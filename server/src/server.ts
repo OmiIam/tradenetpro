@@ -13,6 +13,7 @@ import proxyRoutes from './routes/proxy';
 import healthRoutes from './routes/health';
 import marketRoutes from './routes/market';
 import createKYCRoutes from './routes/kyc';
+import messageRoutes from './routes/messages';
 
 // Load environment variables
 dotenv.config();
@@ -184,8 +185,10 @@ if (useRemoteApi) {
   app.use('/api/debug', createDebugRoutes(database!));
   app.use('/api/market', marketRoutes);
   app.use('/api/kyc', createKYCRoutes(database!.getDatabase()));
+  app.use('/api/messages', messageRoutes);
   console.log('[SERVER] Market data routes registered at /api/market');
   console.log('[SERVER] KYC routes registered at /api/kyc');
+  console.log('[SERVER] Message routes registered at /api/messages');
 }
 
 // Health routes are available regardless of proxy mode

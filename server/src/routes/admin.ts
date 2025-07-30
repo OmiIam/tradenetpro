@@ -14,6 +14,9 @@ import {
 import DatabaseManager from '../models/Database';
 import rateLimit from 'express-rate-limit';
 import sessionRoutes from './admin/sessions';
+import impersonationRoutes from './admin/impersonation';
+import featureFlagRoutes from './admin/feature-flags';
+import broadcastRoutes from './admin/broadcast';
 
 const router = express.Router();
 
@@ -342,6 +345,15 @@ export default function createAdminRoutes(database: DatabaseManager) {
   // Session tracking routes
   router.use('/sessions', sessionRoutes);
 
-  console.log(`[ADMIN] Admin routes registered successfully, including KYC management, /users-with-portfolios, system settings, user suspensions, admin notifications, and session tracking`);
+  // User impersonation routes
+  router.use('/impersonation', impersonationRoutes);
+
+  // Feature flags management routes
+  router.use('/feature-flags', featureFlagRoutes);
+
+  // Broadcast messaging routes
+  router.use('/broadcast', broadcastRoutes);
+
+  console.log(`[ADMIN] Admin routes registered successfully, including KYC management, /users-with-portfolios, system settings, user suspensions, admin notifications, session tracking, user impersonation, feature flags management, and broadcast messaging`);
   return router;
 }

@@ -7,6 +7,9 @@ export interface JWTPayload {
   role: 'user' | 'admin';
   iat?: number;
   exp?: number;
+  // Impersonation metadata
+  _impersonated?: boolean;
+  _originalAdminId?: number;
 }
 
 export interface TokenPair {

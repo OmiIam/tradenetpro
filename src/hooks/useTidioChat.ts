@@ -26,7 +26,7 @@ export const useTidioChat = (options: TidioChatHookOptions = {}) => {
 
   // Set user data in Tidio chat
   const setUserData = useCallback(() => {
-    if (window.tidioChatApi && user) {
+    if (typeof window !== 'undefined' && window.tidioChatApi && user) {
       // Set contact properties for better customer support
       window.tidioChatApi.setContactProperties({
         name: `${user.first_name} ${user.last_name}`,
@@ -53,7 +53,7 @@ export const useTidioChat = (options: TidioChatHookOptions = {}) => {
 
   // Control chat visibility
   const setChatVisibility = useCallback((visible: boolean) => {
-    if (window.tidioChatApi) {
+    if (typeof window !== 'undefined' && window.tidioChatApi) {
       if (visible) {
         window.tidioChatApi.show();
       } else {
@@ -64,19 +64,22 @@ export const useTidioChat = (options: TidioChatHookOptions = {}) => {
 
   // Open chat programmatically
   const openChat = useCallback(() => {
-    if (window.tidioChatApi) {
+    if (typeof window !== 'undefined' && window.tidioChatApi) {
       window.tidioChatApi.open();
     }
   }, []);
 
   // Close chat programmatically
   const closeChat = useCallback(() => {
-    if (window.tidioChatApi) {
+    if (typeof window !== 'undefined' && window.tidioChatApi) {
       window.tidioChatApi.close();
     }
   }, []);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const initializeChat = () => {
       if (!window.tidioChatApi) return;
 
@@ -119,7 +122,7 @@ export const useTidioChat = (options: TidioChatHookOptions = {}) => {
 
     // Wait for Tidio to load
     const checkTidioReady = setInterval(() => {
-      if (window.tidioChatApi) {
+      if (typeof window !== 'undefined' && window.tidioChatApi) {
         clearInterval(checkTidioReady);
         initializeChat();
       }
@@ -135,7 +138,7 @@ export const useTidioChat = (options: TidioChatHookOptions = {}) => {
     closeChat,
     setChatVisibility,
     setUserData,
-    isReady: !!window.tidioChatApi
+    isReady: typeof window !== 'undefined' && !!window.tidioChatApi
   };
 };
 
