@@ -150,6 +150,8 @@ export function useBreakpoint() {
   const [breakpoint, setBreakpoint] = React.useState<'sm' | 'md' | 'lg' | 'xl' | '2xl'>('lg');
 
   React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const checkBreakpoint = () => {
       const width = window.innerWidth;
       if (width < 640) setBreakpoint('sm');
@@ -172,6 +174,8 @@ export function useMobile() {
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };

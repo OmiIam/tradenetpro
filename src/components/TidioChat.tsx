@@ -47,7 +47,7 @@ const TidioChat: React.FC<TidioChatProps> = ({
 }) => {
   useEffect(() => {
     // Handle visibility
-    if (window.tidioChatApi) {
+    if (typeof window !== 'undefined' && window.tidioChatApi) {
       if (isHidden) {
         window.tidioChatApi.hide();
       } else {
@@ -57,6 +57,8 @@ const TidioChat: React.FC<TidioChatProps> = ({
   }, [isHidden]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     // Set up event listeners when chat is loaded
     const handleChatLoad = () => {
       if (window.tidioChatApi) {

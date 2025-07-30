@@ -112,7 +112,11 @@ export default function Dashboard() {
                 <h2 className="text-xl font-semibold text-white mb-2">Error Loading Dashboard</h2>
                 <p className="text-gray-400 mb-4">{dashboardError || marketError}</p>
                 <button 
-                  onClick={() => window.location.reload()} 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.reload()
+                    }
+                  }} 
                   className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                 >
                   Retry
@@ -513,7 +517,11 @@ export default function Dashboard() {
                   You need to be logged in to view your dashboard. Please sign in to access your account.
                 </p>
                 <button 
-                  onClick={() => window.location.href = '/login'} 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/login'
+                    }
+                  }} 
                   className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors"
                 >
                   Sign In
